@@ -100,27 +100,46 @@ Edge uses the same Chromium engine, so you can install Chrome extensions too:
 
 ## How It Works
 
-AnchorRead uses a **reverse-subtraction strategy** (verified against the open-source [text-vide](https://github.com/kevalpatel/text-vide) library) to determine how many characters to bold for each word.
+AnchorRead uses the **text-vide** verified algorithm with 5 fixation boundary tables and linear interpolation for smooth ratio control.
 
-Instead of scaling the bold length directly, we scale the **unbolded (trailing) length**, then subtract from word length. This ensures the fixation landing zone (trailing characters) is never bolded, regardless of the ratio setting.
+**Source:** [Gumball12/text-vide](https://github.com/Gumball12/text-vide) | [HOW.md](https://github.com/Gumball12/text-vide/blob/main/HOW.md)
 
-**The algorithm:**
+**The core algorithm (reverse-subtraction):**
 
 1. Measure word length
-2. Lookup the boundary table `[0, 4, 12, 17, 24, 29, 35, 42, 48]`
-   - Index = number of trailing characters that should NOT be bolded
-3. Scale the unbolded length by `(boldRatio / 0.5)`
-4. Bold length = word length - scaled unbolded length
-5. Clamp: at least 1 char bold, never the entire word
+2. Select the appropriate boundary table based on the Bold Ratio slider
+3. Find the first boundary value >= word length; its index = unbolded trailing count
+4. Bold length = word length - index (never bolds the entire word)
 
-| Word | Length | Trailing Unbolded (base) | Bold Length (50%) | Result |
-|------|--------|--------------------------|-------------------|--------|
-| cat | 3 | 1 | 2 | **ca**t |
-| hello | 5 | 2 | 3 | **hel**lo |
-| reading | 8 | 3 | 5 | **readi**ng |
-| comprehensive | 14 | 4 | 10 | **comprehensi**ve |
+**The Bold Ratio slider maps to text-vide's 5 fixation points:**
 
-The **Bold Ratio** slider scales the base bold length. At 100% the full base length is used; at 10% only 10% of it is applied.
+| Slider | fixationPoint | Behavior |
+|--------|-------------|----------|
+| 10% | 5 (least bold) | Only first 1-2 chars bolded |
+| 30% | 4 | Subtle highlighting |
+| 50% | 3 (default) | Balanced, matches text-vide default |
+| 70% | 2 | Strong highlighting |
+| 90% | 1 (most bold) | Nearly entire word bolded |
+
+Between these 5 points, AnchorRead **linearly interpolates** between the two nearest boundary tables for smooth, continuous adjustment.
+
+**Examples at 50% (fixationPoint=3):**
+
+| Word | Length | Bold Length | Result |
+|------|--------|-------------|--------|
+| cat | 3 | 1 | **c**at |
+| hello | 5 | 3 | **hel**lo |
+| reading | 7 | 4 | **read**ing |
+| comprehensive | 13 | 7 | **compreh**ensive |
+
+**Examples at 90% (fixationPoint=1, most bold):**
+
+| Word | Length | Bold Length | Result |
+|------|--------|-------------|--------|
+| cat | 3 | 2 | **ca**t |
+| hello | 5 | 3 | **hel**lo |
+| reading | 7 | 5 | **readi**ng |
+| comprehensive | 13 | 10 | **comprehens**ive |
 
 ## File Structure
 
