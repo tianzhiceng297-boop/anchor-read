@@ -1,6 +1,6 @@
 /**
  * AnchorRead - Popup Script
- * Manages the toggle switch + bold ratio slider, communicates with content script.
+ * Manages the toggle switch, detects if content script is active.
  */
 
 (function () {
@@ -10,19 +10,38 @@
   const statusHint = document.getElementById('statusHint');
   const statusText = document.getElementById('statusText');
   const toggleRow = document.getElementById('toggleRow');
-  const sliderSection = document.getElementById('sliderSection');
-  const boldRatio = document.getElementById('boldRatio');
-  const sliderValue = document.getElementById('sliderValue');
+  const refreshHint = document.getElementById('refreshHint');
+  const refreshLink = document.getElementById('refreshLink');
+
+  // Check if content script is alive on current tab
+  function checkContentScript(callback) {
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+      if (!tabs[0]) {
+        callback(false);
+        return;
+      }
+      chrome.tabs.sendMessage(tabs[0].id, { action: 'ping' }, function (response) {
+        if (chrome.runtime.lastError || !response) {
+          callback(false);
+        } else {
+          callback(true);
+        }
+      });
+    });
+  }
 
   // Load saved state
-  chrome.storage.local.get(['enabled', 'boldRatio'], function (result) {
+  chrome.storage.local.get(['enabled'], function (result) {
     const enabled = result.enabled || false;
-    const ratio = result.boldRatio || 50;
     toggle.checked = enabled;
-    boldRatio.value = ratio;
-    sliderValue.textContent = ratio + '%';
     updateUI(enabled);
-    sliderSection.classList.toggle('visible', enabled);
+
+    // Check if content script is injected; show refresh hint if not
+    checkContentScript(function (alive) {
+      if (!alive && enabled) {
+        refreshHint.classList.add('visible');
+      }
+    });
   });
 
   // Toggle change handler
@@ -30,8 +49,16 @@
     const enabled = toggle.checked;
     chrome.storage.local.set({ enabled: enabled });
     updateUI(enabled);
-    sliderSection.classList.toggle('visible', enabled);
-    sendToggleMessage(enabled);
+
+    // Ping content script first; if not alive, show refresh hint
+    checkContentScript(function (alive) {
+      if (alive) {
+        refreshHint.classList.remove('visible');
+        sendToggleMessage(enabled);
+      } else {
+        refreshHint.classList.add('visible');
+      }
+    });
   });
 
   // Also allow clicking the row
@@ -41,15 +68,15 @@
     toggle.dispatchEvent(new Event('change'));
   });
 
-  // Bold ratio slider
-  boldRatio.addEventListener('input', function () {
-    const val = parseInt(boldRatio.value, 10);
-    sliderValue.textContent = val + '%';
-    chrome.storage.local.set({ boldRatio: val });
-    // If enabled, re-send enable to re-process with new ratio
-    if (toggle.checked) {
-      sendReEnable();
-    }
+  // Refresh link click handler
+  refreshLink.addEventListener('click', function (e) {
+    e.preventDefault();
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+      if (tabs[0]) {
+        chrome.tabs.reload(tabs[0].id);
+        window.close(); // close popup after refresh
+      }
+    });
   });
 
   function updateUI(enabled) {
@@ -66,14 +93,6 @@
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
       if (tabs[0]) {
         chrome.tabs.sendMessage(tabs[0].id, { action: enabled ? 'enable' : 'disable' });
-      }
-    });
-  }
-
-  function sendReEnable() {
-    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-      if (tabs[0]) {
-        chrome.tabs.sendMessage(tabs[0].id, { action: 'reprocess' });
       }
     });
   }
