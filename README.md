@@ -1,5 +1,7 @@
 # BionicRead
 
+[中文](README_zh.md) | English
+
 Free & open-source Bionic Reading converter for Chrome. Bold the first letters of words to read faster.
 
 ## What is Bionic Reading?
@@ -115,7 +117,6 @@ bionic-read/
 ├── background.js      # Service worker for state management
 ├── popup.html         # Extension popup UI
 ├── popup.js           # Popup logic
-├── popup.css          # Popup styles (embedded in popup.html)
 └── icons/             # Extension icons
     ├── icon16.png
     ├── icon48.png
