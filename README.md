@@ -1,20 +1,20 @@
-# BionicRead
+# AnchorRead
 
 [中文](README_zh.md) | English
 
-Free & open-source Bionic Reading converter for Chrome. Bold the first letters of words to read faster.
+Free & open-source reading accelerator for Chrome. Bold the first part of words to guide your eyes and read faster.
 
-> **Disclaimer**: BionicRead is an independent open-source project and is not affiliated with, endorsed by, or connected to Bionic Reading AG or BRCG Casutt GmbH. "Bionic Reading" is a registered trademark of BRCG Casutt GmbH.
+## What is Fixation Reading?
 
-## What is Bionic Reading?
-
-Bionic Reading is a reading technique that bolds the first portion of each word, guiding the eye through text and potentially improving reading speed and comprehension. This plugin is a free, privacy-friendly implementation of this text formatting approach.
+Fixation reading is a technique that highlights the initial portion of each word, creating artificial fixation points that guide the eye through text. This may help improve reading speed and focus. AnchorRead is a free, privacy-friendly implementation of this concept.
 
 ## Features
 
-- **One-click toggle** — Enable/disable Bionic Reading on any page instantly
+- **One-click toggle** — Enable/disable on any page instantly
+- **Adjustable bold ratio** — Slide between subtle (10%) and bold (90%) to find your comfort zone
+- **Syllable-aware splitting** — Intelligently splits words at syllable boundaries for natural reading
 - **Dynamic content support** — Automatically converts text loaded after page load (SPAs, infinite scroll)
-- **Lightweight** — Zero dependencies, ~5KB total
+- **Lightweight** — Zero dependencies, ~8KB total
 - **Privacy-first** — No data collection, no network requests, no account required
 - **Free forever** — Open source under MIT license
 
@@ -29,7 +29,7 @@ _Coming soon..._
 If you're comfortable with git, clone the repo and load it directly:
 
 ```bash
-git clone https://github.com/tianzhiceng297-boop/bionic-read.git
+git clone https://github.com/tianzhiceng297-boop/anchor-read.git
 ```
 
 Then follow the steps in **Method 3** below to load the cloned folder.
@@ -42,7 +42,7 @@ Never installed a browser extension before? No worries — follow these steps:
 
 Download the source code as a ZIP file:
 
-1. Go to [https://github.com/tianzhiceng297-boop/bionic-read](https://github.com/tianzhiceng297-boop/bionic-read)
+1. Go to [https://github.com/tianzhiceng297-boop/anchor-read](https://github.com/tianzhiceng297-boop/anchor-read)
 2. Click the green **"Code"** button near the top
 3. Select **"Download ZIP"**
 4. Extract the downloaded ZIP file to any folder on your computer
@@ -64,16 +64,16 @@ Download the source code as a ZIP file:
 #### Step 4 — Load the extension
 
 1. Click the **"Load unpacked"** button that appears near the top-left
-2. A file picker window will open — navigate to the `bionic-read` folder you extracted in Step 1
+2. A file picker window will open — navigate to the `anchor-read` folder you extracted in Step 1
 3. Select the folder and click **"Select Folder"**
 
 > **Important**: Select the folder that contains `manifest.json`, NOT its parent folder.
 
 #### Step 5 — Verify installation
 
-- The extension should now appear in your extensions list with the name **"BionicRead"**
-- A puzzle piece 🧩 icon appears in your Chrome toolbar — click it, then pin BionicRead for easy access
-- You should see the BionicRead icon (blue rounded square with a "B") in your toolbar
+- The extension should now appear in your extensions list with the name **"AnchorRead"**
+- A puzzle piece 🧩 icon appears in your Chrome toolbar — click it, then pin AnchorRead for easy access
+- You should see the AnchorRead icon (blue rounded square with an "A") in your toolbar
 
 #### For Microsoft Edge Users
 
@@ -81,45 +81,48 @@ Edge uses the same Chromium engine, so you can install Chrome extensions too:
 
 1. Go to `edge://extensions/`
 2. Enable **Developer mode** (left sidebar)
-3. Click **"Load unpacked"** and select the `bionic-read` folder
+3. Click **"Load unpacked"** and select the `anchor-read` folder
 
 ## Usage
 
-1. Click the **BionicRead** icon in your browser toolbar (if you don't see it, click the 🧩 puzzle icon first to find it)
-2. Toggle the switch to enable/disable Bionic Reading on the current page
-3. The page text is instantly converted — no refresh needed
-4. The toggle state is saved automatically — it remembers your preference across pages
+1. Click the **AnchorRead** icon in your browser toolbar (if you don't see it, click the 🧩 puzzle icon first to find it)
+2. Toggle the switch to enable/disable on the current page
+3. Adjust the **Bold Ratio** slider to control how much of each word is highlighted
+4. The page text is instantly converted — no refresh needed
+5. Settings are saved automatically across pages
 
 ### Tips
 
 - **Not working on a page?** Some pages (like the Chrome Web Store itself) restrict extension content scripts for security reasons
-- **Dynamic pages**: BionicRead automatically handles pages that load content as you scroll (Twitter, Reddit, etc.)
+- **Dynamic pages**: AnchorRead automatically handles pages that load content as you scroll (Twitter, Reddit, etc.)
+- **Adjust the ratio**: Start at 50% and slide left/right until text feels comfortable
 - **Turn off temporarily**: Just toggle the switch off — the page text returns to normal instantly
 
-## Algorithm
+## How It Works
 
-BionicRead uses the proven fixation-boundary algorithm:
+AnchorRead analyzes each word and bolds its initial portion to create "anchors" — visual fixation points that guide the eye forward:
 
-| Word | Length | Bolded | Result |
-|------|--------|--------|--------|
-| a | 1 | 0 | a |
-| cat | 3 | 2 | **ca**t |
-| hello | 5 | 3 | **hel**lo |
-| programming | 11 | 9 | **programmi**ng |
-| comprehensive | 13 | 10 | **comprehensi**ve |
+| Word | Syllables | 50% Bold | Result |
+|------|-----------|-----------|--------|
+| cat | 1 | ca | **ca**t |
+| hello | 2 | hel | **hel**lo |
+| reading | 2 | read | **read**ing |
+| program | 2 | prog | **prog**ram |
+| comprehensive | 4 | comprehe | **comprehe**nsive |
+| beautiful | 3 | beau | **beau**tiful |
 
-The algorithm determines how many characters to bold by looking up a word's length against a boundary table — the index of the matching threshold equals the number of characters left unbolded at the end.
+The bold ratio slider lets you control how aggressively words are highlighted. At higher ratios, more of each word is bolded; at lower ratios, only the first syllable is emphasized.
 
 ## File Structure
 
 ```
-bionic-read/
+anchor-read/
 ├── manifest.json      # Chrome Extension manifest (Manifest V3)
-├── content.js         # Core text conversion logic
+├── content.js         # Core text conversion + syllable splitting
 ├── background.js      # Service worker for state management
-├── popup.html         # Extension popup UI
+├── popup.html         # Extension popup UI with toggle + slider
 ├── popup.js           # Popup logic
-└── icons/             # Extension icons
+└── icons/             # Extension icons (16/48/128px)
     ├── icon16.png
     ├── icon48.png
     └── icon128.png

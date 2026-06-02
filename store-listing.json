@@ -1,0 +1,18 @@
+{
+  "name": "AnchorRead - Reading Accelerator",
+  "short_description": "Bold the first part of words to read faster. Free, open source, zero tracking.",
+  "description": "AnchorRead is a free, open-source Chrome extension that helps you read faster by bolding the initial portion of each word.\n\nHOW IT WORKS\n\nAnchorRead creates \"anchors\" — visual fixation points at the start of each word — that guide your eyes smoothly through text. This technique may help improve reading speed and focus.\n\nKEY FEATURES\n\n• One-click toggle — Enable/disable on any page instantly\n• Adjustable bold ratio — Slide between 10% and 90% to find your comfort zone\n• Syllable-aware splitting — Words are split at natural syllable boundaries for more readable results\n• Dynamic content — Automatically converts text loaded after page load (works with SPAs, infinite scroll, Twitter, Reddit, etc.)\n• Lightweight — Zero dependencies, ~8KB total\n• Privacy-first — No data collection, no network requests, no account required. Works 100% offline.\n\nHOW TO USE\n\n1. Click the AnchorRead icon in your toolbar\n2. Toggle the switch to enable/disable\n3. Drag the bold ratio slider to adjust intensity\n4. Settings are saved automatically across pages\n\nOPEN SOURCE\n\nAnchorRead is 100% open source under the MIT license. View the source code, report issues, or contribute at: https://github.com/tianzhiceng297-boop/anchor-read\n\nPERMISSIONS EXPLAINED\n\n• \"Read and change all your data on all websites\" — Required to bold text on pages you visit. AnchorRead never sends this data anywhere; all processing happens locally in your browser.",
+  "version": "1.1.0",
+  "category": "productivity",
+  "language": "en",
+  "privacy_policy_url": "https://github.com/tianzhiceng297-boop/anchor-read/blob/main/PRIVACY.md",
+  "support_url": "https://github.com/tianzhiceng297-boop/anchor-read/issues",
+  "homepage_url": "https://github.com/tianzhiceng297-boop/anchor-read",
+  "promo_images": {
+    "small": "store-assets/promo-640x400.png",
+    "large": "store-assets/promo-1280x800.png"
+  },
+  "screenshots": {
+    "description": "store-assets/demo.html"
+  }
+}

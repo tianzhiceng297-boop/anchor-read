@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='UTF-8'>
+<title>AnchorRead Demo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; }
+  .header { background: linear-gradient(135deg, #2563eb, #3b82f6); padding: 40px 60px; }
+  .header h1 { color: white; font-size: 28px; }
+  .header p { color: rgba(255,255,255,0.85); margin-top: 8px; font-size: 15px; }
+  .content { max-width: 800px; margin: 40px auto; padding: 0 40px; }
+  .card { background: white; border-radius: 12px; padding: 32px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .card h2 { font-size: 18px; color: #1e293b; margin-bottom: 12px; }
+  .card p { font-size: 15px; line-height: 1.75; color: #475569; }
+  .card p b { color: #1e293b; font-weight: 700; }
+  .demo-row { display: flex; gap: 24px; margin-bottom: 24px; }
+  .demo-box { flex: 1; background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .demo-box .label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #2563eb; margin-bottom: 12px; }
+  .demo-box p { font-size: 14px; line-height: 1.8; color: #475569; }
+  .demo-box p b { font-weight: 700; color: #1e293b; }
+  .controls { display: flex; align-items: center; gap: 16px; background: white; border-radius: 12px; padding: 20px 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 24px; }
+  .controls label { font-size: 13px; font-weight: 600; color: #374151; }
+  .controls input[type=range] { flex: 1; height: 4px; accent-color: #2563eb; }
+  .controls .val { font-size: 13px; font-weight: 700; color: #2563eb; min-width: 40px; }
+  .slider-info { font-size: 13px; color: #6b7280; margin-top: 16px; text-align: center; }
+</style>
+</head>
+<body>
+  <div class='header'>
+    <h1>AnchorRead</h1>
+    <p>Free & Open Source Reading Accelerator for Chrome</p>
+  </div>
+  <div class='content'>
+    <div class='controls'>
+      <label>Bold Ratio:</label>
+      <input type='range' id='slider' min='10' max='90' value='50' step='5'>
+      <span class='val' id='val'>50%</span>
+    </div>
+    <div class='demo-row'>
+      <div class='demo-box'>
+        <div class='label'>Original</div>
+        <p id='original'>The quick brown fox jumps over the lazy dog. Reading is a complex cognitive process of decoding symbols to derive meaning.</p>
+      </div>
+      <div class='demo-box'>
+        <div class='label'>With AnchorRead</div>
+        <p id='converted'>The <b>qu</b>ick <b>br</b>own <b>f</b>ox <b>jum</b>ps <b>o</b>ver <b>th</b>e <b>la</b>zy <b>d</b>og. <b>Rea</b>ding <b>i</b>s <b>a</b> <b>com</b>plex <b>co</b>gnitive <b>pro</b>cess <b>o</b>f <b>de</b>coding <b>sym</b>bols <b>t</b>o <b>de</b>rive <b>mea</b>ning.</p>
+      </div>
+    </div>
+    <div class='card'>
+      <h2>How AnchorRead Helps</h2>
+      <p>By <b>bold</b>ing the <b>ini</b>tial <b>por</b>tion <b>o</b>f <b>e</b>ach <b>wor</b>d, <b>An</b>chorRead <b>cre</b>ates <b>vis</b>ual <b>fix</b>ation <b>poin</b>ts <b>th</b>at <b>gui</b>de <b>you</b>r <b>eye</b>s <b>th</b>rough <b>tex</b>t. <b>Th</b>is <b>may</b> <b>hel</b>p <b>im</b>prove <b>rea</b>ding <b>spe</b>ed <b>an</b>d <b>com</b>prehension.</p>
+    </div>
+  </div>
+</body>
+</html>

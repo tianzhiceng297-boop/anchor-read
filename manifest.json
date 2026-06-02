@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "BionicRead",
-  "version": "1.0.0",
-  "description": "Free & open-source Bionic Reading converter. Bold the first letters of words to read faster.",
+  "name": "AnchorRead",
+  "version": "1.1.0",
+  "description": "Free & open-source reading accelerator. Bold the first part of words to read faster.",
   "permissions": ["activeTab", "scripting", "storage"],
   "content_scripts": [
     {

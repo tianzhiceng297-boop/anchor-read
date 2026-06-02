@@ -1,20 +1,20 @@
-# BionicRead
+# AnchorRead
 
 中文 | [English](README.md)
 
-免费开源的 Bionic Reading Chrome 浏览器插件。加粗每个单词的前几个字母，帮助你读得更快。
+免费开源的阅读加速器 Chrome 浏览器插件。通过加粗单词的前半部分来引导眼球，帮你读得更快。
 
-> **免责声明**：BionicRead 是一个独立的开源项目，与 Bionic Reading AG 及 BRCG Casutt GmbH 没有任何关联、背书或合作关系。"Bionic Reading" 是 BRCG Casutt GmbH 的注册商标。
+## 什么是锚点阅读？
 
-## 什么是 Bionic Reading？
-
-Bionic Reading 是一种阅读辅助技术，通过加粗每个单词的前半部分来引导眼球运动，可能提升阅读速度和理解力。本插件是这种文本格式化方式的开源实现。
+锚点阅读（Fixation Reading）是一种阅读辅助技术，通过加粗每个单词的前半部分来创建人工注视点，引导眼球平滑扫过文本，可能提升阅读速度和专注度。AnchorRead 是这种文本格式化方式的免费开源实现。
 
 ## 功能特性
 
-- **一键开关** — 在任意页面上即时启用/关闭 Bionic Reading
+- **一键开关** — 在任意页面上即时启用/关闭
+- **可调节加粗比例** — 滑块从 10% 到 90%，找到你最舒适的阅读体验
+- **音节感知切分** — 智能按音节边界切分单词，阅读更自然
 - **动态内容支持** — 自动转换页面加载后新增的文本（SPA 应用、无限滚动）
-- **轻量级** — 零依赖，总计约 5KB
+- **轻量级** — 零依赖，总计约 8KB
 - **隐私优先** — 不收集数据，不发网络请求，不需要账号
 - **永久免费** — 基于 MIT 开源协议
 
@@ -29,7 +29,7 @@ _即将上线..._
 如果你熟悉 git，可以直接克隆仓库：
 
 ```bash
-git clone https://github.com/tianzhiceng297-boop/bionic-read.git
+git clone https://github.com/tianzhiceng297-boop/anchor-read.git
 ```
 
 然后按照**方式三**的步骤加载克隆下来的文件夹。
@@ -42,7 +42,7 @@ git clone https://github.com/tianzhiceng297-boop/bionic-read.git
 
 将源码下载为 ZIP 压缩包：
 
-1. 打开 [https://github.com/tianzhiceng297-boop/bionic-read](https://github.com/tianzhiceng297-boop/bionic-read)
+1. 打开 [https://github.com/tianzhiceng297-boop/anchor-read](https://github.com/tianzhiceng297-boop/anchor-read)
 2. 点击页面顶部绿色的 **"Code"** 按钮
 3. 选择 **"Download ZIP"**
 4. 将下载的 ZIP 文件解压到电脑上的任意文件夹
@@ -64,16 +64,16 @@ git clone https://github.com/tianzhiceng297-boop/bionic-read.git
 #### 第 4 步 — 加载插件
 
 1. 点击页面 **左上角** 出现的 **"加载已解压的扩展程序"** 按钮
-2. 在弹出的文件选择器中，找到你在第 1 步解压的 `bionic-read` 文件夹
+2. 在弹出的文件选择器中，找到你在第 1 步解压的 `anchor-read` 文件夹
 3. 选中该文件夹并点击 **"选择文件夹"**
 
 > **注意**：请选择包含 `manifest.json` 的那个文件夹，不要选它的上级目录。
 
 #### 第 5 步 — 确认安装成功
 
-- 扩展列表中应该出现名为 **"BionicRead"** 的扩展
-- Chrome 工具栏会出现一个拼图 🧩 图标 — 点击它，然后将 BionicRead 固定到工具栏
-- 你应该在工具栏看到 BionicRead 的图标（蓝色圆角方形，上面有一个 "B"）
+- 扩展列表中应该出现名为 **"AnchorRead"** 的扩展
+- Chrome 工具栏会出现一个拼图 🧩 图标 — 点击它，然后将 AnchorRead 固定到工具栏
+- 你应该在工具栏看到 AnchorRead 的图标（蓝色圆角方形，上面有一个 "A"）
 
 #### Microsoft Edge 用户
 
@@ -81,45 +81,48 @@ Edge 也使用 Chromium 内核，同样可以安装 Chrome 扩展：
 
 1. 在地址栏输入 `edge://extensions/`
 2. 开启 **开发者模式**（在左侧边栏）
-3. 点击 **"加载已解压的扩展"**，选择 `bionic-read` 文件夹
+3. 点击 **"加载已解压的扩展"**，选择 `anchor-read` 文件夹
 
 ## 使用方法
 
-1. 点击浏览器工具栏中的 **BionicRead** 图标（如果看不到，先点击 🧩 拼图图标找找）
-2. 切换开关来启用/关闭当前页面的 Bionic Reading
-3. 页面文本会即时转换 — 无需刷新
-4. 开关状态会自动保存 — 跨页面记住你的偏好
+1. 点击浏览器工具栏中的 **AnchorRead** 图标（如果看不到，先点击 🧩 拼图图标找找）
+2. 切换开关来启用/关闭当前页面
+3. 拖动 **加粗比例** 滑块，控制每个单词高亮的范围
+4. 页面文本会即时转换 — 无需刷新
+5. 设置自动保存，跨页面保持你的偏好
 
 ### 使用提示
 
 - **某个页面不生效？** 部分页面（如 Chrome 应用商店本身）出于安全原因会限制扩展脚本运行
-- **动态页面**：BionicRead 会自动处理滚动加载内容的页面（如 Twitter、Reddit 等）
+- **动态页面**：AnchorRead 会自动处理滚动加载内容的页面（如 Twitter、Reddit 等）
+- **调节比例**：从默认的 50% 开始，左右滑动直到你觉得阅读舒适
 - **临时关闭**：只需把开关关掉 — 页面文本会立刻恢复原样
 
 ## 算法原理
 
-BionicRead 使用经过验证的注视点边界算法：
+AnchorRead 分析每个单词并加粗其前半部分，创建"锚点"——引导眼球向前的视觉注视点：
 
-| 单词 | 长度 | 加粗字符数 | 结果 |
-|------|------|-----------|------|
-| a | 1 | 0 | a |
-| cat | 3 | 2 | **ca**t |
-| hello | 5 | 3 | **hel**lo |
-| programming | 11 | 9 | **programmi**ng |
-| comprehensive | 13 | 10 | **comprehensi**ve |
+| 单词 | 音节数 | 50% 加粗 | 效果 |
+|------|--------|---------|------|
+| cat | 1 | ca | **ca**t |
+| hello | 2 | hel | **hel**lo |
+| reading | 2 | read | **read**ing |
+| program | 2 | prog | **prog**ram |
+| comprehensive | 4 | comprehe | **comprehe**nsive |
+| beautiful | 3 | beau | **beau**tiful |
 
-算法通过将单词长度与预定义的边界表进行比对来确定加粗字符数——匹配到的边界值索引等于单词末尾不加粗的字符数。
+加粗比例滑块让你控制高亮强度。比例越高，单词加粗越多；比例越低，仅强调第一个音节。
 
 ## 文件结构
 
 ```
-bionic-read/
+anchor-read/
 ├── manifest.json      # Chrome 扩展配置文件（Manifest V3）
-├── content.js         # 核心文本转换逻辑
-├── background.js      # Service Worker，用于状态管理
-├── popup.html         # 扩展弹出窗口 UI
+├── content.js         # 核心文本转换 + 音节切分
+├── background.js      # Service Worker，状态管理
+├── popup.html         # 弹出窗口 UI（开关 + 滑块）
 ├── popup.js           # 弹出窗口逻辑
-└── icons/             # 扩展图标
+└── icons/             # 扩展图标（16/48/128px）
     ├── icon16.png
     ├── icon48.png
     └── icon128.png
