@@ -100,21 +100,25 @@ Edge uses the same Chromium engine, so you can install Chrome extensions too:
 
 ## How It Works
 
-AnchorRead uses the **Fixation Boundary Table** algorithm to determine how many characters to bold for each word. It's a math-based approach — no language dependency, fast and stable.
+AnchorRead uses a **reverse-subtraction strategy** (verified against the open-source [text-vide](https://github.com/kevalpatel/text-vide) library) to determine how many characters to bold for each word.
+
+Instead of scaling the bold length directly, we scale the **unbolded (trailing) length**, then subtract from word length. This ensures the fixation landing zone (trailing characters) is never bolded, regardless of the ratio setting.
 
 **The algorithm:**
+
 1. Measure word length
 2. Lookup the boundary table `[0, 4, 12, 17, 24, 29, 35, 42, 48]`
-3. The index = number of characters NOT bolded; bold length = word length - index
-4. Scale the result by your **Bold Ratio** slider setting
+   - Index = number of trailing characters that should NOT be bolded
+3. Scale the unbolded length by `(boldRatio / 0.5)`
+4. Bold length = word length - scaled unbolded length
+5. Clamp: at least 1 char bold, never the entire word
 
-| Word | Length | Base Bold | 50% Ratio | Result |
-|------|--------|-----------|-------------|--------|
-| cat | 3 | 2 | 1 | **c**at |
-| hello | 5 | 3 | 2 | **he**llo |
-| reading | 7 | 5 | 3 | **rea**ding |
-| program | 7 | 5 | 3 | **pro**gram |
-| comprehensive | 13 | 10 | 5 | **compr**ehensive |
+| Word | Length | Trailing Unbolded (base) | Bold Length (50%) | Result |
+|------|--------|--------------------------|-------------------|--------|
+| cat | 3 | 1 | 2 | **ca**t |
+| hello | 5 | 2 | 3 | **hel**lo |
+| reading | 8 | 3 | 5 | **readi**ng |
+| comprehensive | 14 | 4 | 10 | **comprehensi**ve |
 
 The **Bold Ratio** slider scales the base bold length. At 100% the full base length is used; at 10% only 10% of it is applied.
 

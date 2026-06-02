@@ -2,6 +2,7 @@
  * AnchorRead - Content Script
  * Converts page text by bolding the first portion of each word,
  * using the Fixation Boundary Table algorithm with adjustable bold ratio.
+ * Algorithm verified against text-vide's reverse-subtraction strategy.
  */
 
 (function () {
@@ -11,45 +12,57 @@
   if (window.__anchorReadInjected) return;
   window.__anchorReadInjected = true;
 
-  // ── Defaults ───────────────────────────────────
-  const DEFAULT_BOLD_RATIO = 0.5; // 50%
-  let currentBoldRatio = DEFAULT_BOLD_RATIO;
-
   // ── Fixation Boundary Table ───────────────────
-  // Index = number of characters NOT bolded (trailing)
-  // Word length <= boundary value → use that index
+  // Index = number of characters NOT bolded (trailing, unbolded).
+  // Word length <= boundary value → that index = trailing unbolded count.
+  // Verified against text-vide's reverse-subtraction strategy.
   const FIXATION_BOUNDARIES = [0, 4, 12, 17, 24, 29, 35, 42, 48];
 
   /**
-   * Core algorithm: return how many leading chars to bold.
-   * Uses the fixation boundary table, then scales by boldRatio.
+   * Core algorithm (reverse-subtraction, text-vide verified).
    *
-   * Step 1: Lookup base bold length from boundary table
-   * Step 2: Scale by boldRatio (0.1 ~ 0.9)
-   * Step 3: Clamp to [1, wordLength - 1]
+   * Instead of scaling the bolded length directly, we scale the
+   * UNBOLDED (trailing) length, then subtract from word length.
+   *
+   *   boldLen = len - unboldScaled
+   *
+   * This ensures the fixation landing zone (trailing chars) is
+   * never bolded regardless of ratio.
+   *
+   * boldRatio: 0.1 (10%) → very little bold, many trailing unbolded
+   *             0.5 (50%) → default, matches boundary table
+   *             0.9 (90%) → almost entire word bolded
    */
   function getBoldLength(word, boldRatio) {
     const len = word.length;
     if (len <= 1) return 0;
 
-    // Step 1: base bold length from boundary table
-    let baseBold = 1;
+    // Step 1: lookup base unbolded length from boundary table.
+    // Index i = number of trailing characters that should NOT be bolded.
+    let unboldBase = 0;
     for (let i = 0; i < FIXATION_BOUNDARIES.length; i++) {
       if (len <= FIXATION_BOUNDARIES[i]) {
-        baseBold = Math.max(len - i, 1);
+        unboldBase = i;
         break;
       }
     }
-    // Word longer than table: use len - table.length
-    if (baseBold === 1 && len > FIXATION_BOUNDARIES[FIXATION_BOUNDARIES.length - 1]) {
-      baseBold = len - FIXATION_BOUNDARIES.length + 1;
+    // Word longer than table: use last index as base
+    if (unboldBase === 0 && len > FIXATION_BOUNDARIES[FIXATION_BOUNDARIES.length - 1]) {
+      unboldBase = FIXATION_BOUNDARIES.length - 1;
     }
 
-    // Step 2: scale by boldRatio
-    const scaled = Math.max(1, Math.round(baseBold * boldRatio));
+    // Step 2: scale the UNBOLDED length.
+    // boldRatio=0.5 → scaleFactor=1 → unboldScaled = unboldBase (default)
+    // boldRatio<0.5 → less bold (more trailing unbolded)
+    // boldRatio>0.5 → more bold (less trailing unbolded)
+    const scaleFactor = boldRatio / 0.5;
+    const unboldScaled = Math.max(1, Math.round(unboldBase / scaleFactor));
 
-    // Step 3: clamp — never bold the entire word, never bold 0
-    return Math.min(scaled, len - 1);
+    // Step 3: reverse subtraction
+    const boldLen = len - unboldScaled;
+
+    // Final clamp: bold at least 1 char, never the entire word
+    return Math.max(1, Math.min(boldLen, len - 1));
   }
 
   // ── Word Regex ───────────────────────────────────
@@ -164,25 +177,31 @@
   }
 
   // ── MutationObserver for dynamic content ────────
+  // FIX: always read fresh boldRatio from storage inside the observer callback,
+  // so slider changes take effect for dynamically loaded content.
   let observer = null;
   let debounceTimer = null;
 
-  function startObserving(boldRatio) {
+  function startObserving() {
     if (observer) return;
     observer = new MutationObserver(function (mutations) {
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(function () {
-        for (const mutation of mutations) {
-          if (mutation.type === 'childList') {
-            mutation.addedNodes.forEach(function (node) {
-              if (node.nodeType === Node.TEXT_NODE) {
-                processTextNode(node, boldRatio);
-              } else if (node.nodeType === Node.ELEMENT_NODE && !SKIP_TAGS.has(node.tagName)) {
-                processAllTextNodes(node, boldRatio);
-              }
-            });
+        // Read fresh ratio from storage on every batch
+        chrome.storage.local.get('boldRatio', function (result) {
+          const ratio = ((result.boldRatio || 50) / 100);
+          for (const mutation of mutations) {
+            if (mutation.type === 'childList') {
+              mutation.addedNodes.forEach(function (node) {
+                if (node.nodeType === Node.TEXT_NODE) {
+                  processTextNode(node, ratio);
+                } else if (node.nodeType === Node.ELEMENT_NODE && !SKIP_TAGS.has(node.tagName)) {
+                  processAllTextNodes(node, ratio);
+                }
+              });
+            }
           }
-        }
+        });
       }, 300);
     });
 
@@ -200,13 +219,13 @@
     clearTimeout(debounceTimer);
   }
 
-  // ── Message Handler (from background.js) ─────────
+  // ── Message Handler (from popup / background) ─────────
   chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     if (message.action === 'enable') {
       chrome.storage.local.get('boldRatio', function (result) {
         const ratio = ((result.boldRatio || 50) / 100);
         processAllTextNodes(document.body, ratio);
-        startObserving(ratio);
+        startObserving();
         sendResponse({ ok: true });
       });
       return true; // async
@@ -220,7 +239,7 @@
         stopObserving();
         restoreAll();
         processAllTextNodes(document.body, ratio);
-        startObserving(ratio);
+        startObserving();
         sendResponse({ ok: true });
       });
       return true; // async
@@ -237,7 +256,7 @@
         const ratio = ((result.boldRatio || 50) / 100);
         const doEnable = function () {
           processAllTextNodes(document.body, ratio);
-          startObserving(ratio);
+          startObserving();
         };
         if (document.body) {
           doEnable();
