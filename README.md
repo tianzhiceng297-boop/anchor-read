@@ -11,7 +11,6 @@ Fixation reading is a technique that highlights the initial portion of each word
 ## Features
 
 - **One-click toggle** — Enable/disable on any page instantly
-- **Adjustable bold ratio** — Slide between subtle (10%) and bold (90%) to find your comfort zone
 - **Fixation Boundary Table** — Math-based algorithm, no language dependency, fast and stable
 - **Dynamic content support** — Automatically converts text loaded after page load (SPAs, infinite scroll)
 - **Lightweight** — Zero dependencies, ~8KB total
@@ -86,44 +85,35 @@ Edge uses the same Chromium engine, so you can install Chrome extensions too:
 ## Usage
 
 1. Click the **AnchorRead** icon in your browser toolbar (if you don't see it, click the 🧩 puzzle icon first to find it)
-2. Toggle the switch to enable/disable on the current page
-3. Adjust the **Bold Ratio** slider to control how much of each word is highlighted
-4. The page text is instantly converted — no refresh needed
+2. Toggle the switch to enable on the current page
+3. **First time on a page?** Refresh the page after enabling to activate (you'll see a reminder in the popup)
+4. The page text is instantly converted — no further refresh needed
 5. Settings are saved automatically across pages
+
+### First-Time Reminder
+
+> ⚠️ **After installing the extension or opening a new tab, you must refresh the page once** for AnchorRead to take effect. The popup will show a reminder if the page hasn't been refreshed yet.
 
 ### Tips
 
 - **Not working on a page?** Some pages (like the Chrome Web Store itself) restrict extension content scripts for security reasons
 - **Dynamic pages**: AnchorRead automatically handles pages that load content as you scroll (Twitter, Reddit, etc.)
-- **Adjust the ratio**: Start at 50% and slide left/right until text feels comfortable
 - **Turn off temporarily**: Just toggle the switch off — the page text returns to normal instantly
 
 ## How It Works
 
-AnchorRead uses the **text-vide** verified algorithm with 5 fixation boundary tables and linear interpolation for smooth ratio control.
+AnchorRead uses the **text-vide** verified algorithm with a fixed fixation boundary table (fixationPoint=3, the text-vide default).
 
 **Source:** [Gumball12/text-vide](https://github.com/Gumball12/text-vide) | [HOW.md](https://github.com/Gumball12/text-vide/blob/main/HOW.md)
 
 **The core algorithm (reverse-subtraction):**
 
 1. Measure word length
-2. Select the appropriate boundary table based on the Bold Ratio slider
+2. Look up the boundary table `[0, 1, 2, 5, 7, 9, 11, 13, 15, 17, ...]`
 3. Find the first boundary value >= word length; its index = unbolded trailing count
 4. Bold length = word length - index (never bolds the entire word)
 
-**The Bold Ratio slider maps to text-vide's 5 fixation points:**
-
-| Slider | fixationPoint | Behavior |
-|--------|-------------|----------|
-| 10% | 5 (least bold) | Only first 1-2 chars bolded |
-| 30% | 4 | Subtle highlighting |
-| 50% | 3 (default) | Balanced, matches text-vide default |
-| 70% | 2 | Strong highlighting |
-| 90% | 1 (most bold) | Nearly entire word bolded |
-
-Between these 5 points, AnchorRead **linearly interpolates** between the two nearest boundary tables for smooth, continuous adjustment.
-
-**Examples at 50% (fixationPoint=3):**
+**Examples (fixed algorithm, no slider):**
 
 | Word | Length | Bold Length | Result |
 |------|--------|-------------|--------|
@@ -132,15 +122,6 @@ Between these 5 points, AnchorRead **linearly interpolates** between the two nea
 | reading | 7 | 4 | **read**ing |
 | comprehensive | 13 | 7 | **compreh**ensive |
 
-**Examples at 90% (fixationPoint=1, most bold):**
-
-| Word | Length | Bold Length | Result |
-|------|--------|-------------|--------|
-| cat | 3 | 2 | **ca**t |
-| hello | 5 | 3 | **hel**lo |
-| reading | 7 | 5 | **readi**ng |
-| comprehensive | 13 | 10 | **comprehens**ive |
-
 ## File Structure
 
 ```
@@ -148,7 +129,7 @@ anchor-read/
 ├── manifest.json      # Chrome Extension manifest (Manifest V3)
 ├── content.js         # Core text conversion engine
 ├── background.js      # Service worker for state management
-├── popup.html         # Extension popup UI with toggle + slider
+├── popup.html         # Extension popup UI with toggle
 ├── popup.js           # Popup logic
 └── icons/             # Extension icons (16/48/128px)
     ├── icon16.png
