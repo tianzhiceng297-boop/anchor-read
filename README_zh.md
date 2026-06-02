@@ -4,9 +4,11 @@
 
 免费开源的 Bionic Reading Chrome 浏览器插件。加粗每个单词的前几个字母，帮助你读得更快。
 
+> **免责声明**：BionicRead 是一个独立的开源项目，与 Bionic Reading AG 及 BRCG Casutt GmbH 没有任何关联、背书或合作关系。"Bionic Reading" 是 BRCG Casutt GmbH 的注册商标。
+
 ## 什么是 Bionic Reading？
 
-Bionic Reading 是一种阅读辅助技术，通过加粗每个单词的前半部分来引导眼球运动，可能提升阅读速度和理解力。本插件是官方 Bionic Reading 工具的免费、注重隐私的开源替代品。
+Bionic Reading 是一种阅读辅助技术，通过加粗每个单词的前半部分来引导眼球运动，可能提升阅读速度和理解力。本插件是这种文本格式化方式的开源实现。
 
 ## 功能特性
 

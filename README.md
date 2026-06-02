@@ -4,9 +4,11 @@
 
 Free & open-source Bionic Reading converter for Chrome. Bold the first letters of words to read faster.
 
+> **Disclaimer**: BionicRead is an independent open-source project and is not affiliated with, endorsed by, or connected to Bionic Reading AG or BRCG Casutt GmbH. "Bionic Reading" is a registered trademark of BRCG Casutt GmbH.
+
 ## What is Bionic Reading?
 
-Bionic Reading is a reading technique that bolds the first portion of each word, guiding the eye through text and potentially improving reading speed and comprehension. This plugin is a free, privacy-friendly alternative to the official Bionic Reading tools.
+Bionic Reading is a reading technique that bolds the first portion of each word, guiding the eye through text and potentially improving reading speed and comprehension. This plugin is a free, privacy-friendly implementation of this text formatting approach.
 
 ## Features
 
