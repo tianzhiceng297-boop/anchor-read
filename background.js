@@ -4,8 +4,15 @@
  */
 
 chrome.runtime.onInstalled.addListener(function () {
-  // Set default state
-  chrome.storage.local.set({ enabled: false, boldRatio: 50 });
+  // Only set defaults if not already configured (avoid overwriting user state on reload)
+  chrome.storage.local.get(['enabled', 'boldRatio'], function (result) {
+    const updates = {};
+    if (result.enabled === undefined) updates.enabled = false;
+    if (result.boldRatio === undefined) updates.boldRatio = 50;
+    if (Object.keys(updates).length > 0) {
+      chrome.storage.local.set(updates);
+    }
+  });
 });
 
 // Listen for messages from popup

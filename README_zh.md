@@ -110,11 +110,11 @@ AnchorRead 使用 **Fixation Boundary Table（注视边界表）** 算法来确�
 
 | 单词 | 长度 | 基础加粗 | 50% 比例 | 效果 |
 |------|------|---------|---------|------|
-| cat | 3 | 2 | 1 | **ca**t |
+| cat | 3 | 2 | 1 | **c**at |
 | hello | 5 | 3 | 2 | **he**llo |
-| reading | 8 | 5 | 3 | **rea**ding |
-| program | 7 | 4 | 3 | **pro**gram |
-| comprehensive | 14 | 8 | 4 | **comp**rehensive |
+| reading | 7 | 5 | 3 | **rea**ding |
+| program | 7 | 5 | 3 | **pro**gram |
+| comprehensive | 13 | 10 | 5 | **compr**ehensive |
 
 **加粗比例** 滑块缩放基础加粗长度。100% 时使用完整基础长度；10% 时只应用 10%。
 

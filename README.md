@@ -110,11 +110,11 @@ AnchorRead uses the **Fixation Boundary Table** algorithm to determine how many 
 
 | Word | Length | Base Bold | 50% Ratio | Result |
 |------|--------|-----------|-------------|--------|
-| cat | 3 | 2 | 1 | **ca**t |
+| cat | 3 | 2 | 1 | **c**at |
 | hello | 5 | 3 | 2 | **he**llo |
-| reading | 8 | 5 | 3 | **rea**ding |
-| program | 7 | 4 | 3 | **pro**gram |
-| comprehensive | 14 | 8 | 4 | **comp**rehensive |
+| reading | 7 | 5 | 3 | **rea**ding |
+| program | 7 | 5 | 3 | **pro**gram |
+| comprehensive | 13 | 10 | 5 | **compr**ehensive |
 
 The **Bold Ratio** slider scales the base bold length. At 100% the full base length is used; at 10% only 10% of it is applied.
 
