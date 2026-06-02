@@ -1,7 +1,7 @@
 /**
  * AnchorRead - Content Script
  * Converts page text by bolding the first portion of each word,
- * with adjustable bold ratio and syllable-aware splitting.
+ * using the Fixation Boundary Table algorithm with adjustable bold ratio.
  */
 
 (function () {
@@ -15,38 +15,41 @@
   const DEFAULT_BOLD_RATIO = 0.5; // 50%
   let currentBoldRatio = DEFAULT_BOLD_RATIO;
 
-  // ── Rule-based syllable counter (fallback) ─────
-  function countSyllables(word) {
-    word = word.toLowerCase().replace(/[^a-z]/g, '');
-    if (word.length <= 3) return 1;
-    // Remove trailing 'e' unless preceded by 'l' (e.g. "able")
-    word = word.replace(/([^aeiouy])e$/, '$1');
-    const matches = word.match(/[aeiouy]+/g);
-    return matches ? matches.length : 1;
-  }
+  // ── Fixation Boundary Table ───────────────────
+  // Index = number of characters NOT bolded (trailing)
+  // Word length <= boundary value → use that index
+  const FIXATION_BOUNDARIES = [0, 4, 12, 17, 24, 29, 35, 42, 48];
 
-  // ── Get bold split index using syllable awareness ──
-  function getBoldSplitIndex(word, boldRatio) {
-    const raw = word.replace(/[^a-zA-Z0-9]/g, '');
-    if (raw.length === 0) return word.length;
-    const targetBold = Math.max(1, Math.ceil(raw.length * boldRatio));
+  /**
+   * Core algorithm: return how many leading chars to bold.
+   * Uses the fixation boundary table, then scales by boldRatio.
+   *
+   * Step 1: Lookup base bold length from boundary table
+   * Step 2: Scale by boldRatio (0.1 ~ 0.9)
+   * Step 3: Clamp to [1, wordLength - 1]
+   */
+  function getBoldLength(word, boldRatio) {
+    const len = word.length;
+    if (len <= 1) return 0;
 
-    const sylCount = countSyllables(raw);
-    if (sylCount <= 1) return Math.min(targetBold, raw.length);
-
-    // Find approximate syllable boundary positions
-    const avgSylLen = raw.length / sylCount;
-    let bestSplit = targetBold;
-    let bestDiff = Infinity;
-    for (let s = 1; s < sylCount; s++) {
-      const boundary = Math.round(avgSylLen * s);
-      const diff = Math.abs(boundary - targetBold);
-      if (diff < bestDiff) {
-        bestDiff = diff;
-        bestSplit = boundary;
+    // Step 1: base bold length from boundary table
+    let baseBold = 1;
+    for (let i = 0; i < FIXATION_BOUNDARIES.length; i++) {
+      if (len <= FIXATION_BOUNDARIES[i]) {
+        baseBold = Math.max(len - i, 1);
+        break;
       }
     }
-    return Math.min(Math.max(bestSplit, 1), raw.length - 1);
+    // Word longer than table: use len - table.length
+    if (baseBold === 1 && len > FIXATION_BOUNDARIES[FIXATION_BOUNDARIES.length - 1]) {
+      baseBold = len - FIXATION_BOUNDARIES.length + 1;
+    }
+
+    // Step 2: scale by boldRatio
+    const scaled = Math.max(1, Math.round(baseBold * boldRatio));
+
+    // Step 3: clamp — never bold the entire word, never bold 0
+    return Math.min(scaled, len - 1);
   }
 
   // ── Word Regex ───────────────────────────────────
@@ -69,13 +72,12 @@
     for (const match of matches) {
       const word = match[0];
       const start = match.index;
-      const raw = word.replace(/[^a-zA-Z0-9]/g, '');
-      const boldIdx = getBoldSplitIndex(word, boldRatio);
+      const boldLen = getBoldLength(word, boldRatio);
 
       result += text.slice(lastIdx, start);
 
-      if (boldIdx > 0 && boldIdx < word.length) {
-        result += '<b>' + word.slice(0, boldIdx) + '</b>' + word.slice(boldIdx);
+      if (boldLen > 0 && boldLen < word.length) {
+        result += '<b>' + word.slice(0, boldLen) + '</b>' + word.slice(boldLen);
       } else {
         result += word;
       }

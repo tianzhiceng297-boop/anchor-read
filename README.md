@@ -12,7 +12,7 @@ Fixation reading is a technique that highlights the initial portion of each word
 
 - **One-click toggle** — Enable/disable on any page instantly
 - **Adjustable bold ratio** — Slide between subtle (10%) and bold (90%) to find your comfort zone
-- **Syllable-aware splitting** — Intelligently splits words at syllable boundaries for natural reading
+- **Fixation Boundary Table** — Math-based algorithm, no language dependency, fast and stable
 - **Dynamic content support** — Automatically converts text loaded after page load (SPAs, infinite scroll)
 - **Lightweight** — Zero dependencies, ~8KB total
 - **Privacy-first** — No data collection, no network requests, no account required
@@ -100,25 +100,30 @@ Edge uses the same Chromium engine, so you can install Chrome extensions too:
 
 ## How It Works
 
-AnchorRead analyzes each word and bolds its initial portion to create "anchors" — visual fixation points that guide the eye forward:
+AnchorRead uses the **Fixation Boundary Table** algorithm to determine how many characters to bold for each word. It's a math-based approach — no language dependency, fast and stable.
 
-| Word | Syllables | 50% Bold | Result |
-|------|-----------|-----------|--------|
-| cat | 1 | ca | **ca**t |
-| hello | 2 | hel | **hel**lo |
-| reading | 2 | read | **read**ing |
-| program | 2 | prog | **prog**ram |
-| comprehensive | 4 | comprehe | **comprehe**nsive |
-| beautiful | 3 | beau | **beau**tiful |
+**The algorithm:**
+1. Measure word length
+2. Lookup the boundary table `[0, 4, 12, 17, 24, 29, 35, 42, 48]`
+3. The index = number of characters NOT bolded; bold length = word length - index
+4. Scale the result by your **Bold Ratio** slider setting
 
-The bold ratio slider lets you control how aggressively words are highlighted. At higher ratios, more of each word is bolded; at lower ratios, only the first syllable is emphasized.
+| Word | Length | Base Bold | 50% Ratio | Result |
+|------|--------|-----------|-------------|--------|
+| cat | 3 | 2 | 1 | **ca**t |
+| hello | 5 | 3 | 2 | **he**llo |
+| reading | 8 | 5 | 3 | **rea**ding |
+| program | 7 | 4 | 3 | **pro**gram |
+| comprehensive | 14 | 8 | 4 | **comp**rehensive |
+
+The **Bold Ratio** slider scales the base bold length. At 100% the full base length is used; at 10% only 10% of it is applied.
 
 ## File Structure
 
 ```
 anchor-read/
 ├── manifest.json      # Chrome Extension manifest (Manifest V3)
-├── content.js         # Core text conversion + syllable splitting
+├── content.js         # Core text conversion engine
 ├── background.js      # Service worker for state management
 ├── popup.html         # Extension popup UI with toggle + slider
 ├── popup.js           # Popup logic
