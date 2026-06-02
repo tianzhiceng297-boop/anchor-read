@@ -102,18 +102,20 @@ Edge uses the same Chromium engine, so you can install Chrome extensions too:
 
 ## How It Works
 
-AnchorRead uses the **text-vide** verified algorithm with a fixed fixation boundary table (fixationPoint=3, the text-vide default).
+AnchorRead creates **fixation anchors** by visually "breaking" each word at a letter boundary, giving your eyes a clear landing point during saccades.
 
-**Source:** [Gumball12/text-vide](https://github.com/Gumball12/text-vide) | [HOW.md](https://github.com/Gumball12/text-vide/blob/main/HOW.md)
+### Stage 1: text-vide Boundary Table (Baseline)
 
-**The core algorithm (reverse-subtraction):**
+Uses the **Fixation Boundary Table** verified by the text-vide project (fixationPoint=3, the text-vide default).
 
-1. Measure word length
-2. Look up the boundary table `[0, 1, 2, 5, 7, 9, 11, 13, 15, 17, ...]`
-3. Find the first boundary value >= word length; its index = unbolded trailing count
-4. Bold length = word length - index (never bolds the entire word)
+**Core logic (reverse-subtraction):**
 
-**Examples (fixed algorithm, no slider):**
+1. Measure word length `len`
+2. Look up boundary table `[0, 1, 2, 5, 7, 9, 11, 13, 15, 17, ...]`
+3. Find first boundary value `>= len`; its **index** = count of unbolded trailing characters
+4. Bold length = `len - index` (never bolds the entire word)
+
+**Examples:**
 
 | Word | Length | Bold Length | Result |
 |------|--------|-------------|--------|
@@ -121,6 +123,34 @@ AnchorRead uses the **text-vide** verified algorithm with a fixed fixation bound
 | hello | 5 | 3 | **hel**lo |
 | reading | 7 | 4 | **read**ing |
 | comprehensive | 13 | 7 | **compreh**ensive |
+
+### Stage 2: Optical Balance Adjustment
+
+The boundary table gives a "math midpoint", but the human eye's **visual center of gravity** is not the geometric midpoint. v1.2.6 introduces an optical balance rule engine that adjusts the break point after the table lookup.
+
+**Why optical balance?**
+
+| Problem | Math Break | Visual Feel |
+|---------|-------------|--------------|
+| `water` | `wat\|er` | `t` is a light letter — the break "doesn't hold" |
+| `develop` | `devel\|op` | `p` is a descender — naturally anchors; should use it |
+| `icon` | `ic\|on` | `c` opens right and blends into `o`; break earlier |
+
+**5 priority levels of optical rules:**
+
+| Priority | Rule | Example |
+|----------|------|---------|
+| 1 | **Hand-crafted word table** (optimal break points calibrated manually) | `water` → `wate\|r`, `develop` → `devel\|op` |
+| 2 | **Syllable/morpheme boundaries** | `action` → `ac\|tion`, `running` → `runn\|ing` |
+| 3 | **Visual center biased LEFT** (~1/6 word length left of geometric midpoint) | 7-letter word: midpoint=4, optical break=3 |
+| 4 | **Avoid heavy–light–heavy jumps** | Don't end on visually light letters like `i`/`l`/`t` |
+| 5 | **Prefer ending on descenders/ascenders** | Descenders (`g`/`j`/`p`/`q`/`y`) have "hooks" that visually anchor the weight |
+
+**Fusion strategy:** Boundary table gives baseline, optical rules give suggested value. If the difference `<= 2`, adopt the optical value; otherwise keep baseline (prevents over-correction).
+
+### Content Word Filter (Optional)
+
+Added in v1.2.5: function words (the/to/of/and/be/have/do etc., ~150 words) are skipped from bolding. Only content words (nouns/verbs/adjectives/adverbs) get bolded, reducing visual noise.
 
 ## File Structure
 
