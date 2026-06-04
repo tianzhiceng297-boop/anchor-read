@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AnchorRead v1.2.16 — Browser Test</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 20px; }
+    h1 { color: #1a1a1a; margin-bottom: 20px; }
+    .test-section { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .test-section h2 { color: #333; font-size: 18px; margin-bottom: 12px; border-bottom: 2px solid #e0e0e0; padding-bottom: 8px; }
+    .test-result { padding: 8px 12px; margin: 4px 0; border-radius: 4px; font-family: monospace; font-size: 14px; }
+    .pass { background: #e8f5e9; color: #2e7d32; }
+    .fail { background: #ffebee; color: #c62828; }
+    .info { background: #e3f2fd; color: #1565c0; }
+    .content-block { background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px; padding: 16px; margin: 8px 0; line-height: 1.8; font-size: 15px; }
+    .controls { margin-bottom: 20px; }
+    .controls button { padding: 10px 20px; margin-right: 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; }
+    .btn-enable { background: #4caf50; color: white; }
+    .btn-disable { background: #f44336; color: white; }
+    .btn-test { background: #2196f3; color: white; }
+    #log { background: #263238; color: #aed581; padding: 16px; border-radius: 6px; font-family: 'Consolas', monospace; font-size: 13px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 12px 0; }
+    .stat-card { background: #f8f9fa; border-radius: 6px; padding: 12px; text-align: center; }
+    .stat-card .value { font-size: 24px; font-weight: bold; color: #1a1a1a; }
+    .stat-card .label { font-size: 12px; color: #666; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <h1>AnchorRead v1.2.16 — Browser Test Suite</h1>
+
+  <div class="controls">
+    <button class="btn-enable" onclick="enableExtension()">Enable AnchorRead</button>
+    <button class="btn-disable" onclick="disableExtension()">Disable AnchorRead</button>
+    <button class="btn-test" onclick="runTests()">Run Tests</button>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 1: Text Visibility (Critical)</h2>
+    <p class="info">After enabling AnchorRead, verify that ALL text below is still visible. If any text disappears, the test fails.</p>
+    <div class="content-block" id="test-visibility">
+      <p>Dr. Chuan Shi is a Professor of Practice in Financial Engineering at The Chinese University of Hong Kong, Shenzhen. He brings over a decade of quantitative investment experience to his role, including as a co-founder of Beijing Liangxin Investment Management Co. Ltd. He serves on the editorial board of <em>Computers in Industry</em>.</p>
+      <p>He holds a Ph.D. degree from MIT, specializing in operations research. Before this, he graduated from Tsinghua University with both B.Eng. and M.Eng. degrees. His academic journey has been marked by contributions to optimizing manufacturing systems, bridging both theoretical advances and practical applications.</p>
+    </div>
+    <div id="test-visibility-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Bold Gap Detection</h2>
+    <p class="info">Checks if any single word has multiple bold spans (e.g., <b>Pro</b>f<b>es</b>sor = FAIL).</p>
+    <div class="content-block" id="test-gap">
+      <p>Professor Practice Financial Engineering Shenzhen University quantitative investment experience including co-founder Beijing Liangxin Investment Management editorial contribution optimizing manufacturing systems theoretical advances practical applications statistical modeling machine learning intersection uniquely positioned valuable insights innovations dedicated boundaries particularly particularly passionate educator mentoring inspire generation scientists recognized collaborative cutting-edge real-world scenarios</p>
+    </div>
+    <div id="test-gap-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Invisible Boundary (Double Letters)</h2>
+    <p class="info">Words with double letters (ss, tt, ll, etc.) should NOT break between identical letters.</p>
+    <div class="content-block" id="test-invisible">
+      <p>Professor process success access accept account across address afford attempt attract attack accompany accommodate accumulation alliterate</p>
+    </div>
+    <div id="test-invisible-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4: MutationObserver Stability</h2>
+    <p class="info">Dynamically added text should be processed without causing existing text to disappear or get re-processed.</p>
+    <div class="content-block" id="test-mutation">
+      <p id="mutation-target">Initial text that should remain stable.</p>
+    </div>
+    <div id="test-mutation-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5: Compound Words</h2>
+    <p class="info">Hyphenated words should have a single continuous bold span, not split across hyphens.</p>
+    <div class="content-block" id="test-compound">
+      <p>high-level cutting-edge real-world co-founder state-of-the-art well-known long-term face-to-face self-awareness</p>
+    </div>
+    <div id="test-compound-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Debug: Raw HTML Output</h2>
+    <p class="info">Shows the actual HTML produced by AnchorRead for visual inspection.</p>
+    <div id="debug-output" style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 4px; padding: 16px; font-family: monospace; font-size: 13px; white-space: pre-wrap; word-break: break-all; max-height: 400px; overflow-y: auto;">Click "Run Tests" to see output</div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Results</h2>
+    <div id="log">Ready. Click "Enable AnchorRead" first, then "Run Tests".</div>
+  </div>
+
+  <script>
+    const logEl = document.getElementById('log');
+    function log(msg) { logEl.textContent += msg + '\n'; logEl.scrollTop = logEl.scrollHeight; }
+
+    function enableExtension() {
+      chrome.runtime.sendMessage({ action: 'enable' }, function(response) {
+        log('✅ AnchorRead enabled: ' + JSON.stringify(response));
+        log('⏳ Waiting 2s for extension to finish processing...');
+        setTimeout(runTests, 2000);
+      });
+    }
+
+    function disableExtension() {
+      chrome.runtime.sendMessage({ action: 'disable' }, function(response) {
+        log('❌ AnchorRead disabled: ' + JSON.stringify(response));
+      });
+    }
+
+    function runTests() {
+      log('\n═══ Running Tests ═══');
+      let pass = 0, fail = 0;
+
+      // Debug: show raw HTML of each test section
+      const debugEl = document.getElementById('debug-output');
+      debugEl.textContent = [
+        '--- Test 1 (Visibility) ---',
+        document.getElementById('test-visibility').innerHTML.slice(0, 500),
+        '\n--- Test 2 (Gap) ---',
+        document.getElementById('test-gap').innerHTML.slice(0, 500),
+        '\n--- Test 5 (Compound) ---',
+        document.getElementById('test-compound').innerHTML.slice(0, 500),
+      ].join('\n');
+
+      // Test 1: Text visibility
+      const visBlock = document.getElementById('test-visibility');
+      const visText = visBlock.textContent;
+      const hasText = visText.includes('Professor') && visText.includes('Shenzhen') && visText.includes('Financial');
+      setResult('test-visibility-result', hasText, 'Text visibility: ' + (hasText ? 'All text present' : 'TEXT MISSING!'));
+      hasText ? pass++ : fail++;
+
+      // Test 2: Bold gap detection (check each WORD individually)
+      // A gap means a SINGLE word has multiple bold spans, e.g. Pro|f|essor
+      const gapBlock = document.getElementById('test-gap');
+      const gapHTML = gapBlock.innerHTML;
+      // Match each bold+unbold pair and check if it's part of a continuous word
+      // Pattern: bold text followed by 1-3 unbolded letters then bold again = gap within a word
+      const gapPattern = /<\/b>([a-zA-Z]{1,3})<b>/g;
+      let gapWords = [];
+      let gm;
+      while ((gm = gapPattern.exec(gapHTML)) !== null) {
+        // Get surrounding context to identify the full word
+        const ctxStart = Math.max(0, gm.index - 30);
+        const ctxEnd = Math.min(gapHTML.length, gm.index + gm[0].length + 30);
+        const context = gapHTML.slice(ctxStart, ctxEnd);
+        // Only flag if the gap is within a word (letters on both sides, no space/punctuation)
+        const beforeChar = gapHTML[gm.index - 1]; // last char of first bold
+        const afterChar = gapHTML[gm.index + gm[0].length]; // first char of second bold
+        if (/[a-zA-Z]/.test(beforeChar) && /[a-zA-Z]/.test(afterChar)) {
+          // Extract the word around this gap
+          const wordStart = gapHTML.lastIndexOf('>', gm.index) + 1;
+          const wordEnd = gapHTML.indexOf('<', gm.index + gm[0].length);
+          const wordContext = gapHTML.slice(wordStart, wordEnd).replace(/<[^>]+>/g, '');
+          gapWords.push(wordContext.slice(0, 30));
+        }
+      }
+      const noGaps = gapWords.length === 0;
+      setResult('test-gap-result', noGaps, 'Bold gaps: ' + (noGaps ? 'None found (words are individually checked)' : gapWords.length + ' found: ' + [...new Set(gapWords)].join(', ')));
+      noGaps ? pass++ : fail++;
+
+      // Test 3: Invisible boundary
+      const invBlock = document.getElementById('test-invisible');
+      const invHTML = invBlock.innerHTML;
+      // Check if any bold ends with same letter as next unbolded starts
+      const invIssue = /<b>([a-z])<\/b>\1/i.test(invHTML);
+      setResult('test-invisible-result', !invIssue, 'Invisible boundaries: ' + (invIssue ? 'FOUND (bad!)' : 'None (good!)'));
+      !invIssue ? pass++ : fail++;
+
+      // Test 4: MutationObserver stability
+      const mutTarget = document.getElementById('mutation-target');
+      const originalText = mutTarget.closest('[data-anchor-original]')?.getAttribute('data-anchor-original') || mutTarget.textContent;
+      // Add new content dynamically
+      const newP = document.createElement('p');
+      newP.textContent = 'Dynamically added text for mutation testing.';
+      document.getElementById('test-mutation').appendChild(newP);
+      // Check after delay
+      setTimeout(() => {
+        const stillVisible = document.getElementById('test-mutation').textContent.includes('Initial text');
+        setResult('test-mutation-result', stillVisible, 'MutationObserver: ' + (stillVisible ? 'Original text preserved' : 'TEXT LOST!'));
+        stillVisible ? pass++ : fail++;
+        log('\n═══ Results: ' + pass + ' passed, ' + fail + ' failed ═══');
+      }, 1000);
+
+      // Test 5: Compound words
+      // Check if hyphenated words have a single continuous bold span
+      // A split compound = bold text, then hyphen, then bold again
+      const compBlock = document.getElementById('test-compound');
+      const compHTML = compBlock.innerHTML;
+      // Pattern: </b>-<b> means a hyphen breaks the bold span (bad!)
+      const splitCompoundPattern = /<\/b>-<b>/g;
+      let compoundIssues = [];
+      let cm;
+      while ((cm = splitCompoundPattern.exec(compHTML)) !== null) {
+        // Get the word context around this split
+        const wordStart = compHTML.lastIndexOf('>', cm.index - 1) + 1;
+        const wordEnd = compHTML.indexOf('<', cm.index + cm[0].length);
+        const wordContext = compHTML.slice(wordStart, wordEnd).replace(/<[^>]+>/g, '');
+        compoundIssues.push(wordContext.slice(0, 30));
+      }
+      const compoundOk = compoundIssues.length === 0;
+      setResult('test-compound-result', compoundOk, 'Compound words: ' + (compoundOk ? 'All single bold span (no </b>-<b> found)' : compoundIssues.length + ' split: ' + [...new Set(compoundIssues)].join(', ')));
+      compoundOk ? pass++ : fail++;
+    }
+
+    function setResult(id, pass, msg) {
+      const el = document.getElementById(id);
+      el.className = 'test-result ' + (pass ? 'pass' : 'fail');
+      el.textContent = (pass ? '✅ PASS: ' : '❌ FAIL: ') + msg;
+      log((pass ? '✅' : '❌') + ' ' + msg);
+    }
+  </script>
+</body>
+</html>
