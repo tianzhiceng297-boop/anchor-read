@@ -31,10 +31,9 @@
   var loadingMsg  = loadingEl.querySelector('div:last-child');
 
   // ── Configure worker ──
-  // DON'T set workerSrc in MV3 — CSP blocks 'unsafe-eval' which the
-  // pdf.js worker needs. Let pdf.js use its built-in fake worker
-  // (main thread) instead. Slightly slower but works everywhere.
-  // pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';
+  // pdf.js v2: disable worker to avoid MV3 CSP eval restrictions.
+  // Everything runs in the main thread via pdf.js built-in fake worker.
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '';
 
   // ── Fixation toggle ──
   var fixationEnabled = true;
@@ -386,7 +385,17 @@
       return;
     }
     dropErrorEl.textContent = '';
-    renderPDF(file, file.name);
+
+    // Read file into ArrayBuffer for pdf.js v2
+    showLoading('Reading file...');
+    var reader = new FileReader();
+    reader.onload = function () {
+      renderPDF(new Uint8Array(reader.result), file.name);
+    };
+    reader.onerror = function () {
+      showDropZone('Failed to read file. It may be corrupted or inaccessible.');
+    };
+    reader.readAsArrayBuffer(file);
   }
 
   dropBoxEl.addEventListener('dragover', function (e) { e.preventDefault(); dropBoxEl.classList.add('drag-over'); });
@@ -417,7 +426,7 @@
 
   if (pdfUrl && (pdfUrl.startsWith('http://') || pdfUrl.startsWith('https://'))) {
     var displayName = decodeURIComponent(pdfUrl.split('/').pop() || pdfUrl);
-    renderPDF(pdfUrl, displayName);
+    renderPDF({ url: pdfUrl }, displayName);
   } else if (pdfUrl) {
     showDropZone('Local files cannot be loaded automatically.\nDrag the PDF here or click to select.');
   } else {
