@@ -225,51 +225,75 @@
     loadingTask.promise.then(function (pdf) {
       var totalPages = pdf.numPages;
       pageInfoEl.textContent = totalPages + ' page' + (totalPages > 1 ? 's' : '');
-      var emptyPageCount = 0;
 
-      // Process pages sequentially
-      var currentPage = 1;
+      // ── Quick check: sample first 2 pages for text ──
+      var pagesToSample = Math.min(2, totalPages);
+      loadingMsg.textContent = 'Checking PDF type...';
 
-      function processNext() {
-        if (currentPage > totalPages) {
-          // If ALL pages had no text, show a single summary
-          if (emptyPageCount === totalPages && totalPages > 1) {
-            contentEl.innerHTML = '';
-            var summaryDiv = document.createElement('div');
-            summaryDiv.className = 'pdf-page';
-            summaryDiv.innerHTML = '<p style="font-size:16px;color:#e5e7eb;">This PDF contains no extractable text.</p>' +
-              '<p style="color:#9ca3af;margin-top:16px;">' +
-              'All ' + totalPages + ' pages are image-based. ' +
-              'AnchorRead can only work with text-based PDFs (created from Word, LaTeX, etc.).</p>' +
-              '<p style="color:#9ca3af;margin-top:8px;">Try a different PDF, or convert this one with OCR software first.</p>';
-            contentEl.appendChild(summaryDiv);
-          }
-          if (fixationEnabled) processAllTextNodes(contentEl);
+      var samplePromises = [];
+      for (var i = 1; i <= pagesToSample; i++) {
+        samplePromises.push(pdf.getPage(i).then(function (page) {
+          return page.getTextContent().then(function (tc) {
+            return tc && tc.items && tc.items.length > 0;
+          });
+        }));
+      }
+
+      Promise.all(samplePromises).then(function (hasTextResults) {
+        var anyText = hasTextResults.some(function (r) { return r; });
+
+        if (!anyText) {
+          // Image-based PDF — stop early, show clear message
+          showUI();
+          var summaryDiv = document.createElement('div');
+          summaryDiv.className = 'pdf-page';
+          summaryDiv.innerHTML =
+            '<p style="font-size:18px;color:#e5e7eb;">This PDF is image-based</p>' +
+            '<p style="color:#9ca3af;margin-top:20px;line-height:1.8;">' +
+            'AnchorRead cannot work with scanned or image-only PDFs.<br>' +
+            'The text is stored as pictures, not as selectable characters.</p>' +
+            '<p style="color:#60a5fa;margin-top:20px;font-size:14px;">What you can do:</p>' +
+            '<ul style="color:#9ca3af;margin-top:8px;line-height:1.8;padding-left:20px;">' +
+            '<li>Use OCR software (Adobe Acrobat, ABBYY) to convert to text PDF</li>' +
+            '<li>Re-export from the original source (Word, LaTeX, Markdown)</li>' +
+            '<li>Use a text-based PDF instead</li>' +
+            '</ul>';
+          contentEl.appendChild(summaryDiv);
           return;
         }
 
-        loadingMsg.textContent = 'Rendering page ' + currentPage + ' of ' + totalPages + '...';
+        // Has text — proceed with full rendering
+        var emptyPageCount = 0;
+        var currentPage = 1;
 
-        pdf.getPage(currentPage).then(function (page) {
-          return renderPage(page, currentPage, function (isEmpty) {
-            if (isEmpty) emptyPageCount++;
+        function processNext() {
+          if (currentPage > totalPages) {
+            if (fixationEnabled) processAllTextNodes(contentEl);
+            return;
+          }
+
+          loadingMsg.textContent = 'Rendering page ' + currentPage + ' of ' + totalPages + '...';
+
+          pdf.getPage(currentPage).then(function (page) {
+            return renderPage(page, currentPage, function (isEmpty) {
+              if (isEmpty) emptyPageCount++;
+            });
+          }).then(function () {
+            currentPage++;
+            processNext();
+          }).catch(function (err) {
+            var errDiv = document.createElement('div');
+            errDiv.className = 'pdf-page';
+            errDiv.innerHTML = '<p style="color:#fca5a5;">Page ' + currentPage + ' error: ' + esc(err.message) + '</p>';
+            contentEl.appendChild(errDiv);
+            currentPage++;
+            processNext();
           });
-        }).then(function () {
-          currentPage++;
-          processNext();
-        }).catch(function (err) {
-          // Page failed — add error marker and continue
-          var errDiv = document.createElement('div');
-          errDiv.className = 'pdf-page';
-          errDiv.innerHTML = '<p style="color:#fca5a5;">Page ' + currentPage + ' error: ' + esc(err.message) + '</p>';
-          contentEl.appendChild(errDiv);
-          currentPage++;
-          processNext();
-        });
-      }
+        }
 
-      showUI();
-      processNext();
+        showUI();
+        processNext();
+      });
     }).catch(function (err) {
       var msg = err.message || String(err);
       if (msg.indexOf('InvalidPDFException') !== -1 || msg.indexOf('No PDF') !== -1) {
