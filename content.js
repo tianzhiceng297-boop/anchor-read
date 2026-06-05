@@ -4,7 +4,7 @@
  * Converts page text by bolding the first portion of each word,
  * using the text-vide verified Fixation Boundary Table algorithm.
  *
- * v1.2.18: Fix split-word grouping — allow sibling-parent grouping (MathJax/SPA spans)
+ * v1.3.0: Add PDF viewer support — popup detects PDF pages, opens in pdf-viewer
  */
 (function () {
   'use strict';

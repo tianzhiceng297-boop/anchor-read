@@ -227,6 +227,36 @@
       text-align: center;
     }
 
+    /* PDF Section */
+    .pdf-section {
+      margin-top: 12px;
+      text-align: center;
+    }
+
+    .pdf-button {
+      width: 100%;
+      padding: 10px 0;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .pdf-button:hover {
+      background: #1d4ed8;
+    }
+
+    .pdf-hint {
+      margin-top: 8px;
+      font-size: 11px;
+      color: #9ca3af;
+      line-height: 1.5;
+    }
+
     .footer a {
       font-size: 11px;
       color: #9ca3af;
@@ -241,7 +271,7 @@
 <body>
   <div class="header">
     <div class="logo"><b>Anchor</b>Read</div>
-    <span class="version">v1.2.18</span>
+    <span class="version">v1.3.0</span>
   </div>
 
   <div class="toggle-row" id="toggleRow">
@@ -260,6 +290,16 @@
     <div class="refresh-hint" id="refreshHint">
       ⚠️ AnchorRead is installed but not yet active on this page.<br>
       <a id="refreshLink">Refresh the page</a> to activate.
+    </div>
+
+    <div class="pdf-section" id="pdfSection" style="display:none">
+      <button class="pdf-button" id="pdfOpenBtn">
+        Open PDF in AnchorRead
+      </button>
+      <div class="pdf-hint">
+        AnchorRead can't run inside Chrome's built-in PDF viewer.<br>
+        Click above to open the PDF in a text-friendly viewer.
+      </div>
     </div>
 
     <div class="footer">

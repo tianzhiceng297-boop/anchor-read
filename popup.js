@@ -1,19 +1,51 @@
 /**
  * AnchorRead - Popup Script
- * Manages the toggle switch, detects if content script is active.
+ * Manages the toggle switch, detects if content script is active,
+ * and handles PDF page detection.
  */
-
 (function () {
   'use strict';
 
-  const toggle = document.getElementById('toggle');
-  const statusHint = document.getElementById('statusHint');
-  const statusText = document.getElementById('statusText');
-  const toggleRow = document.getElementById('toggleRow');
-  const refreshHint = document.getElementById('refreshHint');
-  const refreshLink = document.getElementById('refreshLink');
+  var toggle = document.getElementById('toggle');
+  var statusHint = document.getElementById('statusHint');
+  var statusText = document.getElementById('statusText');
+  var toggleRow = document.getElementById('toggleRow');
+  var refreshHint = document.getElementById('refreshHint');
+  var refreshLink = document.getElementById('refreshLink');
+  var pdfSection = document.getElementById('pdfSection');
+  var pdfOpenBtn = document.getElementById('pdfOpenBtn');
 
-  // Check if content script is alive on current tab
+  // ── PDF Detection ──────────────────────────
+  function isPDFUrl(url) {
+    if (!url) return false;
+    // Direct .pdf links
+    if (/\.pdf$/i.test(url)) return true;
+    // Chrome PDF viewer URL patterns
+    if (url.startsWith('chrome-extension://') && url.indexOf('.pdf') !== -1) return true;
+    if (url.startsWith('file://') && /\.pdf$/i.test(url.split('?')[0])) return true;
+    return false;
+  }
+
+  function detectPDF(callback) {
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+      if (!tabs[0]) { callback(false, null); return; }
+      var isPdf = isPDFUrl(tabs[0].url);
+      callback(isPdf, isPdf ? tabs[0].url : null);
+    });
+  }
+
+  // PDF open button handler
+  pdfOpenBtn.addEventListener('click', function () {
+    detectPDF(function (isPdf, pdfUrl) {
+      if (isPdf && pdfUrl) {
+        var viewerUrl = chrome.runtime.getURL('pdf-viewer.html') + '?url=' + encodeURIComponent(pdfUrl);
+        chrome.tabs.create({ url: viewerUrl });
+        window.close();
+      }
+    });
+  });
+
+  // ── Content script alive check ─────────────
   function checkContentScript(callback) {
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
       if (!tabs[0]) {
@@ -30,27 +62,39 @@
     });
   }
 
-  // Load saved state
-  chrome.storage.local.get(['enabled'], function (result) {
-    const enabled = result.enabled || false;
-    toggle.checked = enabled;
-    updateUI(enabled);
+  // ── Init ───────────────────────────────────
+  detectPDF(function (isPdf) {
+    if (isPdf) {
+      // PDF mode: hide normal UI, show PDF section
+      toggleRow.style.display = 'none';
+      statusText.style.display = 'none';
+      refreshHint.classList.remove('visible');
+      pdfSection.style.display = 'block';
+    } else {
+      // Normal mode
+      pdfSection.style.display = 'none';
 
-    // Check if content script is injected; show refresh hint if not
-    checkContentScript(function (alive) {
-      if (!alive && enabled) {
-        refreshHint.classList.add('visible');
-      }
-    });
+      // Load saved state
+      chrome.storage.local.get(['enabled'], function (result) {
+        var enabled = result.enabled || false;
+        toggle.checked = enabled;
+        updateUI(enabled);
+
+        checkContentScript(function (alive) {
+          if (!alive && enabled) {
+            refreshHint.classList.add('visible');
+          }
+        });
+      });
+    }
   });
 
-  // Toggle change handler
+  // ── Toggle change handler ──────────────────
   toggle.addEventListener('change', function () {
-    const enabled = toggle.checked;
+    var enabled = toggle.checked;
     chrome.storage.local.set({ enabled: enabled });
     updateUI(enabled);
 
-    // Ping content script first; if not alive, show refresh hint
     checkContentScript(function (alive) {
       if (alive) {
         refreshHint.classList.remove('visible');
@@ -61,24 +105,25 @@
     });
   });
 
-  // Also allow clicking the row
+  // Click on toggle row
   toggleRow.addEventListener('click', function (e) {
     if (e.target === toggle || (e.target.tagName === 'SPAN' && e.target.classList.contains('toggle-slider'))) return;
     toggle.checked = !toggle.checked;
     toggle.dispatchEvent(new Event('change'));
   });
 
-  // Refresh link click handler
+  // Refresh link click
   refreshLink.addEventListener('click', function (e) {
     e.preventDefault();
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
       if (tabs[0]) {
         chrome.tabs.reload(tabs[0].id);
-        window.close(); // close popup after refresh
+        window.close();
       }
     });
   });
 
+  // ── Helpers ────────────────────────────────
   function updateUI(enabled) {
     if (enabled) {
       statusHint.textContent = 'Active on this page';
