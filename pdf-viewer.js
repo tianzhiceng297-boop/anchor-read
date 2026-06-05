@@ -1,20 +1,29 @@
 /**
- * AnchorRead PDF Viewer
- * v1.3.0 — Renders PDFs with pdf.js and applies AnchorRead bold formatting.
+ * AnchorRead PDF Viewer v1.3.0
+ *
+ * Renders PDFs with pdf.js and applies AnchorRead bold formatting.
+ * Supports:
+ *   - Drag-and-drop / file picker (works for local files)
+ *   - Remote URL via ?url= query param (may fail if CORS blocks)
  */
 (function () {
   'use strict';
 
   // ── DOM Elements ────────────────────────────
+  var toolbarEl   = document.getElementById('toolbar');
   var loadingEl   = document.getElementById('loading');
-  var errorEl     = document.getElementById('error');
-  var errorMsgEl  = document.getElementById('errorMsg');
+  var dropZoneEl  = document.getElementById('dropZone');
+  var dropBoxEl   = document.getElementById('dropBox');
+  var dropErrorEl = document.getElementById('dropError');
+  var fileInputEl = document.getElementById('fileInput');
   var contentEl   = document.getElementById('content');
   var toggleEl    = document.getElementById('toggleBold');
   var titleEl     = document.getElementById('pdfTitle');
   var pageInfoEl  = document.getElementById('pageInfo');
+  var openFileBtn = document.getElementById('openFileBtn');
+  var pdfjsLib    = window.pdfjsLib;
 
-  // ── Enable toggle ──
+  // ── Fixation toggle ──
   var fixationEnabled = true;
 
   toggleEl.addEventListener('change', function () {
@@ -27,7 +36,7 @@
   });
 
   // ═══════════════════════════════════════════════
-  //  AnchorRead Algorithm (same as content.js v1.2.18)
+  //  AnchorRead Algorithm (mirrors content.js v1.3.0)
   // ═══════════════════════════════════════════════
 
   var FUNCTION_WORDS = new Set([
@@ -117,19 +126,18 @@
       if (!found && candidate < len - 1) candidate++;
     }
     if (candidate < len) {
-      var nextCh = word[candidate];
-      if (DESCENDERS.has(nextCh) || ASCENDERS.has(nextCh)) candidate++;
+      if (DESCENDERS.has(word[candidate]) || ASCENDERS.has(word[candidate])) candidate++;
     }
     if (candidate < len - 1) {
       for (var k = candidate; k <= Math.min(candidate + 2, len - 1); k++) {
         if (DESCENDERS.has(word[k]) || ASCENDERS.has(word[k])) { candidate = k + 1; break; }
       }
     }
-    var PLATFORM_LETTERS = new Set(['t', 'd', 'n', 'm', 'r', 's']);
+    var PLATFORM = new Set(['t', 'd', 'n', 'm', 'r', 's']);
     if (candidate > 1 && candidate < len) {
-      if (!PLATFORM_LETTERS.has(word[candidate - 1])) {
+      if (!PLATFORM.has(word[candidate - 1])) {
         for (var m = candidate; m <= Math.min(candidate + 2, len - 1); m++) {
-          if (PLATFORM_LETTERS.has(word[m])) { candidate = m + 1; break; }
+          if (PLATFORM.has(word[m])) { candidate = m + 1; break; }
         }
       }
     }
@@ -137,8 +145,7 @@
       if (candidate - 1 >= Math.ceil(len * 0.3)) candidate--;
       else if (candidate + 1 < len) candidate++;
     }
-    candidate = Math.max(1, Math.min(candidate, len - 1));
-    return candidate;
+    return Math.max(1, Math.min(candidate, len - 1));
   }
 
   function getBoldLength(word) {
@@ -147,15 +154,13 @@
     var idx = BOUNDARY_TABLE.findIndex(function (b) { return len <= b; });
     var unbolded = idx === -1 ? BOUNDARY_TABLE.length : idx;
     var boldLen = len - unbolded;
-    var opticalBoldLen = findOptimalBreak(word);
-    var deviation = Math.abs(boldLen - opticalBoldLen);
-    if (deviation <= 2) boldLen = opticalBoldLen;
-    var rawBoldLen = Math.max(0, Math.min(boldLen, len - 1));
-    if (len <= 2) return rawBoldLen;
-    if (len <= 4) return Math.max(2, rawBoldLen);
-    if (len <= 6) return Math.max(3, rawBoldLen);
-    var minBold = Math.max(3, Math.ceil(len * 0.35));
-    return Math.max(minBold, rawBoldLen);
+    var optical = findOptimalBreak(word);
+    if (Math.abs(boldLen - optical) <= 2) boldLen = optical;
+    var raw = Math.max(0, Math.min(boldLen, len - 1));
+    if (len <= 2) return raw;
+    if (len <= 4) return Math.max(2, raw);
+    if (len <= 6) return Math.max(3, raw);
+    return Math.max(Math.max(3, Math.ceil(len * 0.35)), raw);
   }
 
   function convertText(text) {
@@ -168,28 +173,28 @@
       var word = match[0];
       var start = match.index;
       result += text.slice(lastIdx, start);
-      if (word.indexOf('.') !== -1) { result += word; lastIdx = start + word.length; continue; }
-      if (CJK_RANGE.test(word)) { result += word; lastIdx = start + word.length; continue; }
-      if (word.length <= 2) { result += word; lastIdx = start + word.length; continue; }
-      var normalized = word.toLowerCase().replace(/['\u2019]/g, '');
-      var isFunctionWord = FUNCTION_WORDS.has(normalized);
-      var boldLen = getBoldLength(word);
-      if (!isFunctionWord && boldLen > 0 && boldLen < word.length) {
-        result += '<b>' + encodeHTML(word.slice(0, boldLen)) + '</b>' + encodeHTML(word.slice(boldLen));
+      if (word.indexOf('.') !== -1) { result += esc(word); lastIdx = start + word.length; continue; }
+      if (CJK_RANGE.test(word)) { result += esc(word); lastIdx = start + word.length; continue; }
+      if (word.length <= 2) { result += esc(word); lastIdx = start + word.length; continue; }
+      var norm = word.toLowerCase().replace(/['\u2019]/g, '');
+      var isFn = FUNCTION_WORDS.has(norm);
+      var bl = getBoldLength(word);
+      if (!isFn && bl > 0 && bl < word.length) {
+        result += '<b>' + esc(word.slice(0, bl)) + '</b>' + esc(word.slice(bl));
       } else {
-        result += encodeHTML(word);
+        result += esc(word);
       }
       lastIdx = start + word.length;
     }
-    result += text.slice(lastIdx);
+    result += esc(text.slice(lastIdx));
     return result;
   }
 
-  function encodeHTML(str) {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  // ── DOM Processing (simplified — no skip tags in our controlled page) ──
+  // ── DOM Processing ──
   function processAllTextNodes(root) {
     var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode: function (node) {
@@ -198,13 +203,9 @@
         return NodeFilter.FILTER_ACCEPT;
       }
     });
-
     var nodes = [];
     while (walker.nextNode()) nodes.push(walker.currentNode);
-
-    for (var i = 0; i < nodes.length; i++) {
-      processTextNode(nodes[i]);
-    }
+    for (var i = 0; i < nodes.length; i++) processTextNode(nodes[i]);
   }
 
   function processTextNode(node) {
@@ -212,8 +213,7 @@
     if (node.parentElement && node.parentElement.hasAttribute('data-anchor-original')) return;
     var original = node.textContent;
     var converted = convertText(original);
-    if (converted === encodeHTML(original)) return;
-
+    if (converted === esc(original)) return;
     var span = document.createElement('span');
     span.setAttribute('data-anchor-original', original);
     span.innerHTML = converted;
@@ -233,78 +233,81 @@
   //  PDF Loading & Rendering
   // ═══════════════════════════════════════════════
 
-  function getPDFUrl() {
-    var params = new URLSearchParams(window.location.search);
-    return params.get('url') || params.get('src');
-  }
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';
 
-  function showError(msg) {
+  function showUI() {
     loadingEl.style.display = 'none';
-    errorEl.style.display = 'flex';
-    errorMsgEl.textContent = msg;
+    dropZoneEl.classList.add('hidden');
+    toolbarEl.style.display = 'flex';
   }
 
-  function renderPDF(pdfUrl) {
-    // Configure pdf.js worker
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';
+  function showDropZone(msg) {
+    loadingEl.style.display = 'none';
+    toolbarEl.style.display = 'none';
+    contentEl.innerHTML = '';
+    dropZoneEl.classList.remove('hidden');
+    if (msg) dropErrorEl.textContent = msg;
+    else dropErrorEl.textContent = '';
+  }
 
-    titleEl.textContent = decodeURIComponent(pdfUrl.split('/').pop() || 'PDF Document');
+  function showLoading(msg) {
+    dropZoneEl.classList.add('hidden');
+    toolbarEl.style.display = 'none';
+    contentEl.innerHTML = '';
+    loadingEl.style.display = 'flex';
+    loadingEl.querySelector('div:last-child').textContent = msg || 'Loading PDF...';
+  }
 
-    pdfjsLib.getDocument(pdfUrl).promise.then(function (pdf) {
+  function renderPDF(source, displayName) {
+    showLoading();
+    titleEl.textContent = displayName || 'PDF Document';
+    contentEl.innerHTML = '';
+
+    pdfjsLib.getDocument(source).promise.then(function (pdf) {
       var totalPages = pdf.numPages;
       pageInfoEl.textContent = totalPages + ' page' + (totalPages > 1 ? 's' : '');
 
-      // Load all pages
       var pagePromises = [];
-      for (var i = 1; i <= totalPages; i++) {
-        pagePromises.push(pdf.getPage(i));
-      }
+      for (var i = 1; i <= totalPages; i++) pagePromises.push(pdf.getPage(i));
 
       Promise.all(pagePromises).then(function (pages) {
-        loadingEl.style.display = 'none';
+        showUI();
 
-        // Render pages sequentially to preserve order
         var chain = Promise.resolve();
-        pages.forEach(function (page, index) {
-          chain = chain.then(function () {
-            return renderPage(page, index + 1);
-          });
+        pages.forEach(function (page) {
+          chain = chain.then(function () { return renderPage(page); });
         });
 
         chain.then(function () {
-          // Apply AnchorRead after all pages are rendered
-          if (fixationEnabled) {
-            processAllTextNodes(contentEl);
-          }
+          if (fixationEnabled) processAllTextNodes(contentEl);
         });
       }).catch(function (err) {
-        showError('Failed to render pages: ' + err.message);
+        showDropZone('Failed to extract text: ' + err.message);
       });
     }).catch(function (err) {
-      if (err.name === 'UnknownErrorException' || err.message === 'fetch failed') {
-        showError('Cannot load PDF. The file may be inaccessible (try opening from a local file or a CORS-enabled URL).');
-      } else {
-        showError('Failed to load PDF: ' + err.message);
-      }
+      showDropZone('Failed to load PDF: ' + err.message);
     });
   }
 
-  function renderPage(page, pageNum) {
-    // Get text content with positions
+  function renderPage(page) {
     return page.getTextContent().then(function (textContent) {
       var pageDiv = document.createElement('div');
       pageDiv.className = 'pdf-page';
-      pageDiv.setAttribute('data-page', pageNum);
 
       if (!textContent.items || textContent.items.length === 0) {
+        var p = document.createElement('p');
+        p.textContent = '[No text content on this page]';
+        p.style.color = '#9ca3af';
+        pageDiv.appendChild(p);
         contentEl.appendChild(pageDiv);
         return;
       }
 
-      // Group text items into lines by Y position, then into paragraphs
+      // Build lines from positioned text items
       var lines = [];
       var currentLine = [];
       var lastY = null;
+      var lineGap = null; // typical line height
 
       for (var i = 0; i < textContent.items.length; i++) {
         var item = textContent.items[i];
@@ -313,63 +316,95 @@
 
         if (lastY === null) {
           lastY = y;
-        } else if (Math.abs(y - lastY) > 3) {
-          // New line detected
-          if (currentLine.length > 0) {
-            lines.push(currentLine);
-            currentLine = [];
-          }
-          lastY = y;
-
-          // If vertical gap is large (>20px), treat as paragraph break
-          if (Math.abs(y - (lines.length > 0 ? Math.round(textContent.items[0].transform[5]) : y)) > 20 && lines.length > 0) {
-            // We'll handle paragraph breaks below
+        } else {
+          var dy = Math.abs(y - lastY);
+          if (dy > 2) {
+            // new line
+            if (currentLine.length > 0) {
+              lines.push(currentLine);
+              if (lineGap === null && lines.length >= 2) {
+                var prevY = 0;
+                // estimate line gap
+              }
+              currentLine = [];
+            }
+            lastY = y;
           }
         }
 
-        currentLine.push({ str: item.str, x: Math.round(item.transform[4]), y: y, width: item.width, height: item.height });
+        currentLine.push({ str: item.str, x: Math.round(item.transform[4]) });
       }
       if (currentLine.length > 0) lines.push(currentLine);
 
-      // Convert lines to paragraphs (merge lines that are close together)
+      // Estimate typical line height to detect paragraph breaks
+      var gaps = [];
+      for (var l = 1; l < lines.length; l++) {
+        // The Y values are baseline positions; compute gap
+        // Since we saved offset, lines[l][0].y - lines[l-1][0].y gives gap
+      }
+
+      // Group lines into paragraphs based on vertical spacing
       var paragraphs = [];
       var currentPara = null;
-      var lastLineY = null;
 
-      for (var l = 0; l < lines.length; l++) {
-        var line = lines[l];
-        var lineY = line[0].y;
-
-        if (currentPara === null) {
-          currentPara = [line];
-        } else if (Math.abs(lineY - lastLineY) < 20) {
-          // Same paragraph — merge line
-          currentPara.push(line);
-        } else {
-          // New paragraph
-          paragraphs.push(currentPara);
-          currentPara = [line];
+      for (var ln = 0; ln < lines.length; ln++) {
+        if (ln === 0) {
+          currentPara = [lines[ln]];
+          continue;
         }
-        lastLineY = lineY;
+        // Check if there's a significant vertical gap between consecutive lines
+        // that are also at visibly different X positions (paragraph indent)
+        var prevLastItem = lines[ln-1][lines[ln-1].length - 1];
+        var currFirstItem = lines[ln][0];
+        var xGap = Math.abs(currFirstItem.x - prevLastItem.x);
+
+        // If line starts far right compared to where previous line ended
+        // OR there's an extra blank line (we detect by position jump in list)
+        // we treat as paragraph break
+        if (xGap > 100 && xGap > Math.abs(lines[ln][lines[ln].length-1].x - currFirstItem.x)) {
+          paragraphs.push(currentPara);
+          currentPara = [lines[ln]];
+        } else {
+          currentPara.push(lines[ln]);
+        }
       }
       if (currentPara !== null) paragraphs.push(currentPara);
 
-      // Render paragraphs into DOM
+      // If paragraph detection produced too many tiny chunks, fall back to all-in-one
+      if (paragraphs.length > lines.length / 2) {
+        paragraphs = [lines];
+      }
+
+      // Render paragraphs
       for (var p = 0; p < paragraphs.length; p++) {
         var para = paragraphs[p];
         var paraEl = document.createElement('p');
 
-        for (var ln = 0; ln < para.length; ln++) {
-          var line = para[ln];
-          // Sort by X position
-          line.sort(function (a, b) { return a.x - b.x; });
+        for (var ln2 = 0; ln2 < para.length; ln2++) {
+          var lineWords = para[ln2];
+          // Sort by X position for reading order
+          lineWords.sort(function (a, b) { return a.x - b.x; });
 
-          var lineText = line.map(function (item) { return item.str; }).join(' ');
-          paraEl.appendChild(document.createTextNode(lineText));
-
-          if (ln < para.length - 1) {
-            paraEl.appendChild(document.createTextNode(' '));
+          // Merge adjacent words that are fragments
+          var merged = [];
+          for (var w = 0; w < lineWords.length; w++) {
+            if (merged.length === 0) {
+              merged.push(lineWords[w]);
+            } else {
+              var prev = merged[merged.length - 1];
+              var gap = lineWords[w].x - (prev.x + prev.str.length * 7); // rough estimate
+              if (gap < 10) {
+                // Merge: close together in X = same word split
+                prev.str += lineWords[w].str;
+              } else {
+                merged.push(lineWords[w]);
+              }
+            }
           }
+
+          var lineText = merged.map(function (item) { return item.str; }).join(' ');
+          paraEl.appendChild(document.createTextNode(lineText));
+          if (ln2 < para.length - 1) paraEl.appendChild(document.createTextNode(' '));
         }
 
         pageDiv.appendChild(paraEl);
@@ -380,13 +415,71 @@
   }
 
   // ═══════════════════════════════════════════════
-  //  Init
+  //  File Drop / Select Handlers
   // ═══════════════════════════════════════════════
 
+  function handleFile(file) {
+    if (!file || file.type !== 'application/pdf') {
+      dropErrorEl.textContent = 'Please select a PDF file.';
+      return;
+    }
+    dropErrorEl.textContent = '';
+    // Pass File object directly to pdf.js
+    renderPDF(file, file.name);
+  }
+
+  // Drag and drop
+  dropBoxEl.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    dropBoxEl.classList.add('drag-over');
+  });
+  dropBoxEl.addEventListener('dragleave', function () {
+    dropBoxEl.classList.remove('drag-over');
+  });
+  dropBoxEl.addEventListener('drop', function (e) {
+    e.preventDefault();
+    dropBoxEl.classList.remove('drag-over');
+    var file = e.dataTransfer.files[0];
+    handleFile(file);
+  });
+
+  // Click to select
+  dropBoxEl.addEventListener('click', function () {
+    fileInputEl.click();
+  });
+  fileInputEl.addEventListener('change', function () {
+    var file = fileInputEl.files[0];
+    handleFile(file);
+  });
+
+  // Toolbar "Open another" button
+  openFileBtn.addEventListener('click', function () {
+    contentEl.innerHTML = '';
+    showDropZone();
+  });
+
+  // ═══════════════════════════════════════════════
+  //  Init — try URL query param first
+  // ═══════════════════════════════════════════════
+
+  function getPDFUrl() {
+    var params = new URLSearchParams(window.location.search);
+    return params.get('url') || params.get('src');
+  }
+
   var pdfUrl = getPDFUrl();
-  if (!pdfUrl) {
-    showError('No PDF URL provided. Add ?url=... to the page URL.');
+
+  if (pdfUrl) {
+    // Only attempt URL load if it's http/https (not file://)
+    if (pdfUrl.startsWith('http://') || pdfUrl.startsWith('https://')) {
+      var displayName = decodeURIComponent(pdfUrl.split('/').pop() || pdfUrl);
+      renderPDF(pdfUrl, displayName);
+    } else {
+      // file:// or other protocol — can't fetch from extension, show drop zone
+      showDropZone('Local file URLs cannot be loaded automatically.\nDrag the PDF here or click to select.');
+    }
   } else {
-    renderPDF(pdfUrl);
+    // No URL provided — just show drop zone
+    showDropZone();
   }
 })();

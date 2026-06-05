@@ -37,11 +37,19 @@
   // PDF open button handler
   pdfOpenBtn.addEventListener('click', function () {
     detectPDF(function (isPdf, pdfUrl) {
-      if (isPdf && pdfUrl) {
-        var viewerUrl = chrome.runtime.getURL('pdf-viewer.html') + '?url=' + encodeURIComponent(pdfUrl);
-        chrome.tabs.create({ url: viewerUrl });
-        window.close();
+      if (!isPdf || !pdfUrl) return;
+
+      var viewerUrl;
+      if (pdfUrl.startsWith('http://') || pdfUrl.startsWith('https://')) {
+        // Remote PDF: pass URL so viewer can try to fetch it
+        viewerUrl = chrome.runtime.getURL('pdf-viewer.html') + '?url=' + encodeURIComponent(pdfUrl);
+      } else {
+        // Local file (file://): can't fetch, viewer shows drop zone
+        viewerUrl = chrome.runtime.getURL('pdf-viewer.html');
       }
+
+      chrome.tabs.create({ url: viewerUrl });
+      window.close();
     });
   });
 
@@ -63,13 +71,21 @@
   }
 
   // ── Init ───────────────────────────────────
-  detectPDF(function (isPdf) {
+  var pdfHint = document.getElementById('pdfHint');
+
+  detectPDF(function (isPdf, pdfUrl) {
     if (isPdf) {
       // PDF mode: hide normal UI, show PDF section
       toggleRow.style.display = 'none';
       statusText.style.display = 'none';
       refreshHint.classList.remove('visible');
       pdfSection.style.display = 'block';
+
+      if (pdfUrl && (pdfUrl.startsWith('http://') || pdfUrl.startsWith('https://'))) {
+        pdfHint.innerHTML = 'AnchorRead can&apos;t run inside Chrome&apos;s built-in PDF viewer.<br>Click above to open this PDF in a text-friendly viewer.';
+      } else {
+        pdfHint.innerHTML = 'Local files can&apos;t be loaded automatically.<br>Click above, then drag the PDF into the viewer page.';
+      }
     } else {
       // Normal mode
       pdfSection.style.display = 'none';
