@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AnchorRead",
-  "version": "1.2.17",
+  "version": "1.2.18",
   "description": "Free & open-source reading accelerator. Bold the first part of words to read faster.",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": ["<all_urls>"],

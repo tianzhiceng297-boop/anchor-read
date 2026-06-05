@@ -4,7 +4,7 @@
  * Converts page text by bolding the first portion of each word,
  * using the text-vide verified Fixation Boundary Table algorithm.
  *
- * v1.2.17: Add CJK character bypass — Chinese/Japanese/Korean text is no longer bolded.
+ * v1.2.18: Fix split-word grouping — allow sibling-parent grouping (MathJax/SPA spans)
  */
 (function () {
   'use strict';
@@ -329,13 +329,18 @@
   }
 
   // ── Split-Word Grouping ──────────────────────
-  // SPA frameworks (React, Vue, etc.) often split a single word across
-  // multiple DOM elements, e.g. <span>Prof</span><span>essor</span>.
+  // SPA frameworks (React, Vue) and MathJax/KaTeX often split a single
+  // word across multiple DOM elements, e.g. <span>Prof</span><span>essor</span>
+  // or <span class="mjx">optim</span><span class="mjx">izing</span>.
   // Without grouping, each fragment gets processed as an independent
   // "word" with its own boldLen, creating visible gaps like **Pro**f**es**sor.
   // This function groups adjacent text nodes that form continuous words
   // (letter-to-letter boundary with no whitespace/punctuation between them).
-
+  //
+  // Grouping policy:
+  //   ✅ SAME parent       → group freely
+  //   ✅ SIBLING parents   → group (safe: common grandparent for span insert)
+  //   ❌ ANCESTOR-DESCENDANT → DO NOT group (would cascade-remove the span)
   function groupTextNodes(textNodes) {
     if (!textNodes || textNodes.length === 0) return [];
     var groups = [];
@@ -346,18 +351,23 @@
 
       var group = [textNodes[i]];
       used.add(textNodes[i]);
-      var groupParent = textNodes[i].parentNode;
 
-      // Check if subsequent text nodes continue the same word
-      // IMPORTANT: Only group text nodes that share the SAME parent element.
-      // Grouping across different parents causes processTextNodeGroup to remove
-      // parent elements, which can accidentally remove the replacement span too,
-      // making ALL text disappear from the page.
       for (var j = i + 1; j < textNodes.length; j++) {
         if (used.has(textNodes[j])) continue;
 
-        // Must be in the same parent to be considered part of the same word
-        if (textNodes[j].parentNode !== groupParent) break;
+        // Check if parents are compatible for grouping
+        var prevParent = group[group.length - 1].parentNode;
+        var nextParent = textNodes[j].parentNode;
+
+        if (prevParent !== nextParent) {
+          // Allow grouping if parents are SIBLINGS (same grandparent)
+          // — common for MathJax, KaTeX, and SPA split-word spans.
+          // Reject if parents are in ANCESTOR-DESCENDANT relationship,
+          // which would cause text disappearance during replacement.
+          var prevGrandparent = prevParent && prevParent.parentNode;
+          var nextGrandparent = nextParent && nextParent.parentNode;
+          if (!prevGrandparent || !nextGrandparent || prevGrandparent !== nextGrandparent) break;
+        }
 
         var lastText = group[group.length - 1].textContent;
         var nextText = textNodes[j].textContent;
@@ -398,6 +408,21 @@
       }
     }
 
+    // Check if all parent elements are SIBLINGS (for the cross-parent case)
+    var allSiblings = false;
+    var commonGrandparent = null;
+    if (!sameParent && firstParent) {
+      commonGrandparent = firstParent.parentNode;
+      allSiblings = true;
+      for (var i = 1; i < textNodes.length; i++) {
+        var p = textNodes[i].parentNode;
+        if (!p || p.parentNode !== commonGrandparent) {
+          allSiblings = false;
+          break;
+        }
+      }
+    }
+
     var span = document.createElement('span');
 
     if (!sameParent && firstParent && firstParent !== document.body) {
@@ -421,11 +446,20 @@
           textNodes[i].parentNode.removeChild(textNodes[i]);
         }
       }
+    } else if (allSiblings && commonGrandparent) {
+      // SIBLING parents (e.g. <span>degr</span><span>ees</span> inside same <p>)
+      // Safe: insert span as child of grandparent, remove all original parents
+      commonGrandparent.insertBefore(span, textNodes[0].parentNode);
+      for (var i = 0; i < textNodes.length; i++) {
+        var parent = textNodes[i].parentNode;
+        if (parent) {
+          parent.parentNode.removeChild(parent);
+        }
+      }
     } else {
-      // Different parent elements — SAFETY: fall back to individual processing.
-      // The cross-parent removal logic was removed in v1.2.16 because it
-      // could accidentally remove the replacement span when one parent is
-      // an ancestor of another, causing text to vanish entirely.
+      // Different parent elements in ANCESTOR-DESCENDANT relationship
+      // — SAFETY: fall back to individual processing.
+      // Removing an ancestor would cascade-remove the span we just inserted.
       for (var i = 0; i < textNodes.length; i++) {
         if (textNodes[i].parentNode) {
           processTextNode(textNodes[i]);
