@@ -225,13 +225,25 @@
     loadingTask.promise.then(function (pdf) {
       var totalPages = pdf.numPages;
       pageInfoEl.textContent = totalPages + ' page' + (totalPages > 1 ? 's' : '');
+      var emptyPageCount = 0;
 
-      // Process pages sequentially to avoid memory pressure
+      // Process pages sequentially
       var currentPage = 1;
 
       function processNext() {
         if (currentPage > totalPages) {
-          // All done
+          // If ALL pages had no text, show a single summary
+          if (emptyPageCount === totalPages && totalPages > 1) {
+            contentEl.innerHTML = '';
+            var summaryDiv = document.createElement('div');
+            summaryDiv.className = 'pdf-page';
+            summaryDiv.innerHTML = '<p style="font-size:16px;color:#e5e7eb;">This PDF contains no extractable text.</p>' +
+              '<p style="color:#9ca3af;margin-top:16px;">' +
+              'All ' + totalPages + ' pages are image-based. ' +
+              'AnchorRead can only work with text-based PDFs (created from Word, LaTeX, etc.).</p>' +
+              '<p style="color:#9ca3af;margin-top:8px;">Try a different PDF, or convert this one with OCR software first.</p>';
+            contentEl.appendChild(summaryDiv);
+          }
           if (fixationEnabled) processAllTextNodes(contentEl);
           return;
         }
@@ -239,7 +251,9 @@
         loadingMsg.textContent = 'Rendering page ' + currentPage + ' of ' + totalPages + '...';
 
         pdf.getPage(currentPage).then(function (page) {
-          return renderPage(page, currentPage);
+          return renderPage(page, currentPage, function (isEmpty) {
+            if (isEmpty) emptyPageCount++;
+          });
         }).then(function () {
           currentPage++;
           processNext();
@@ -268,19 +282,28 @@
     });
   }
 
-  function renderPage(page, pageNum) {
+  function renderPage(page, pageNum, onEmpty) {
     return page.getTextContent().then(function (textContent) {
       var pageDiv = document.createElement('div');
       pageDiv.className = 'pdf-page';
 
       if (!textContent.items || textContent.items.length === 0) {
+        if (onEmpty) onEmpty(true);
+        // This PDF has no extractable text (scanned/image-based).
+        // pdf.js can't OCR — show a clear message.
         var p = document.createElement('p');
-        p.textContent = '[No text content on this page]';
+        p.textContent = '[Page ' + pageNum + ': No extractable text]';
         p.style.color = '#9ca3af';
         pageDiv.appendChild(p);
+        var note = document.createElement('p');
+        note.textContent = 'This PDF appears to be image-based (scanned). AnchorRead can only bold text-based PDFs.';
+        note.style.cssText = 'color:#9ca3af;font-size:12px;margin-top:12px;';
+        pageDiv.appendChild(note);
         contentEl.appendChild(pageDiv);
         return;
       }
+
+      if (onEmpty) onEmpty(false);
 
       // Build lines: group text items by Y position
       var lines = [];
