@@ -31,9 +31,7 @@
   var loadingMsg  = loadingEl.querySelector('div:last-child');
 
   // ── Configure worker ──
-  // pdf.js v2: disable worker to avoid MV3 CSP eval restrictions.
-  // Everything runs in the main thread via pdf.js built-in fake worker.
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';
 
   // ── Fixation toggle ──
   var fixationEnabled = true;
