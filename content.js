@@ -4,8 +4,7 @@
  * Converts page text by bolding the first portion of each word,
  * using the text-vide verified Fixation Boundary Table algorithm.
  *
- * v1.2.16: Fix groupTextNodes cross-parent grouping causing text disappearance
- *          Only group text nodes that share the same parent element.
+ * v1.2.17: Add CJK character bypass — Chinese/Japanese/Korean text is no longer bolded.
  */
 (function () {
   'use strict';
@@ -236,6 +235,11 @@
   // are treated as single units so bolding doesn't restart mid-word.
   const WORD_REGEX = /([\p{L}]+(?:[-.'\u2019][\p{L}]+)*)/gu;
 
+  // ── CJK Range ───────────────────────────────
+  // AnchorRead is designed for Latin-script text only.
+  // CJK characters (Chinese, Japanese, Korean) should never be bolded.
+  const CJK_RANGE = /[\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uAC00-\uD7AF]/;
+
   const SKIP_TAGS = new Set([
     'SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'SELECT', 'OPTION',
     'NOSCRIPT', 'IFRAME', 'OBJECT', 'SVG', 'MATH', 'CODE', 'PRE',
@@ -259,6 +263,15 @@
 
       // ── Skip abbrevations containing periods (Ph.D., B.Eng., Co., etc.) ──
       if (word.indexOf('.') !== -1) {
+        result += word;
+        lastIdx = start + word.length;
+        continue;
+      }
+
+      // ── Skip CJK text (Chinese, Japanese, Korean) ──
+      // AnchorRead is designed for Latin-script text. Bolding CJK
+      // characters disrupts their layout and readability.
+      if (CJK_RANGE.test(word)) {
         result += word;
         lastIdx = start + word.length;
         continue;
