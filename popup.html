@@ -266,12 +266,65 @@
     .footer a:hover {
       color: #2563eb;
     }
+
+    /* Keyboard shortcut hint */
+    .shortcut-hint {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 11px;
+      color: #9ca3af;
+    }
+
+    .shortcut-key {
+      display: inline-block;
+      padding: 1px 6px;
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      font-family: SFMono-Regular, Menlo, monospace;
+      font-size: 10px;
+      color: #6b7280;
+      font-weight: 600;
+    }
+
+    /* Site blacklist button */
+    .blacklist-btn {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      padding: 8px 0;
+      background: none;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #6b7280;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .blacklist-btn:hover {
+      background: #fef2f2;
+      border-color: #fca5a5;
+      color: #dc2626;
+    }
+
+    .blacklist-btn.is-blacklisted {
+      background: #f0fdf4;
+      border-color: #86efac;
+      color: #16a34a;
+    }
+
+    .blacklist-btn.is-blacklisted:hover {
+      background: #fef2f2;
+      border-color: #fca5a5;
+      color: #dc2626;
+    }
   </style>
 </head>
 <body>
   <div class="header">
     <div class="logo"><b>Anchor</b>Read</div>
-    <span class="version">v1.3.0</span>
+    <span class="version">v1.4.0</span>
   </div>
 
   <div class="toggle-row" id="toggleRow">
@@ -302,8 +355,16 @@
       </div>
     </div>
 
+    <div class="shortcut-hint" id="shortcutHint">
+      <span class="shortcut-key">Alt+A</span> to toggle
+    </div>
+
+    <button class="blacklist-btn" id="blacklistBtn" style="display:none">
+      Disable for this site
+    </button>
+
     <div class="footer">
-    <a href="https://github.com" target="_blank">Free & Open Source</a>
+    <a href="https://github.com/tianzhiceng297-boop/anchor-read" target="_blank">Free & Open Source</a>
   </div>
 
   <script src="popup.js"></script>

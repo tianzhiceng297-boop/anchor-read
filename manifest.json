@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AnchorRead",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Free & open-source reading accelerator. Bold the first part of words to read faster.",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": ["<all_urls>"],
@@ -28,5 +28,13 @@
   },
   "background": {
     "service_worker": "background.js"
+  },
+  "commands": {
+    "toggle-anchor": {
+      "suggested_key": {
+        "default": "Alt+A"
+      },
+      "description": "Toggle AnchorRead on/off"
+    }
   }
 }

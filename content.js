@@ -5,6 +5,7 @@
  * using the text-vide verified Fixation Boundary Table algorithm.
  *
  * v1.3.0: Add PDF viewer support — popup detects PDF pages, opens in pdf-viewer
+ * v1.4.0: Keyboard shortcut (Alt+A), copy-fix, per-site blacklist
  */
 (function () {
   'use strict';
@@ -736,25 +737,64 @@
     return true;
   });
 
+  // ── Copy Fix ─────────────────────────────────
+  // When users copy text, strip our <b> wrapper so they get clean plain text.
+  document.addEventListener('copy', function (e) {
+    // Only act if we have processed spans on the page
+    if (!document.querySelector('span[data-anchor-original]')) return;
+
+    var sel = window.getSelection();
+    if (!sel || sel.isCollapsed) return;
+
+    var range = sel.getRangeAt(0);
+    var container = range.cloneContents();
+
+    // Walk the cloned selection and replace anchor spans with their original text
+    var walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT, {
+      acceptNode: function (n) {
+        return n.hasAttribute('data-anchor-original') ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+      }
+    });
+
+    var toReplace = [];
+    while (walker.nextNode()) toReplace.push(walker.currentNode);
+
+    if (toReplace.length === 0) return; // no anchor spans in selection, let default copy happen
+
+    toReplace.forEach(function (span) {
+      var text = span.getAttribute('data-anchor-original');
+      var textNode = document.createTextNode(text);
+      span.parentNode.replaceChild(textNode, span);
+    });
+
+    // Replace clipboard with cleaned content
+    e.clipboardData.setData('text/plain', container.textContent);
+    e.preventDefault();
+  });
+
   // ── Auto-enable on injection ─────────────────────
   function init() {
     // Hook SPA routing first to detect page navigations
     hookSpaRouting();
 
-    chrome.storage.local.get(['enabled'], function (result) {
-      if (result.enabled) {
-        var doEnable = function () {
-          processAllTextNodes(document.body);
-          startObserving();
-          // Start safety sweep to catch SPA-re-rendered nodes
-          // that the MutationObserver may have missed
-          startSafetySweep();
-        };
-        if (document.body) {
-          doEnable();
-        } else {
-          document.addEventListener('DOMContentLoaded', doEnable);
-        }
+    chrome.storage.local.get(['enabled', 'siteBlacklist'], function (result) {
+      if (!result.enabled) return;
+
+      // Check if current site is blacklisted
+      var blacklist = result.siteBlacklist || [];
+      var hostname = '';
+      try { hostname = window.location.hostname; } catch (e) {}
+      if (blacklist.indexOf(hostname) !== -1) return; // site is blacklisted
+
+      var doEnable = function () {
+        processAllTextNodes(document.body);
+        startObserving();
+        startSafetySweep();
+      };
+      if (document.body) {
+        doEnable();
+      } else {
+        document.addEventListener('DOMContentLoaded', doEnable);
       }
     });
   }
